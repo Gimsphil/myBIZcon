@@ -7,9 +7,14 @@ AGY Step 15 Security Hardening applied:
   - X-API-Key header authentication on sensitive endpoints
   - Path traversal protection on /voice/meeting file_path parameter
 
+Step 19 Enhancement:
+  - GET /health endpoint with uptime, RAG index status, CORS origin count
+  - .env.example provided for easy deployment configuration
+
 Role flow: AGY (Coder) → Antigravity (Reviewer/Push Gate)
 """
 import os
+import time
 import logging
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, status, Depends, Header
@@ -29,10 +34,13 @@ from app.services.rag_engine import rag_engine
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("myBIZcon_Main")
 
+# Track server start time for uptime reporting
+_SERVER_START_TIME = time.time()
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    version="1.0.0",
-    description="Universal AI Business Assistant (myBIZcon) API Server"
+    version="1.1.0",
+    description="Universal AI Business Assistant (myBIZcon) API Server - Phase 6 Secured"
 )
 
 # ── Security: API Key Authentication Dependency ────────────────────────────
@@ -120,10 +128,32 @@ class SearchPayload(BaseModel):
 
 @app.get("/")
 def read_root():
+    """Root endpoint: basic online check."""
     return {
         "status": "ONLINE",
         "service": "myBIZcon API Gateway",
         "engine": "Google Gemini 1.5 Flash"
+    }
+
+
+@app.get("/health")
+def health_check():
+    """
+    🟢 Extended Health Check endpoint.
+    Returns server uptime, RAG index status, CORS policy count, and engine info.
+    Useful for monitoring dashboards and deployment readiness verification.
+    Added: Antigravity Step 19 (Phase 7 concurrent work).
+    """
+    uptime_seconds = round(time.time() - _SERVER_START_TIME, 2)
+    return {
+        "status": "HEALTHY",
+        "version": "1.1.0",
+        "engine": "Google Gemini 1.5 Flash",
+        "uptime_seconds": uptime_seconds,
+        "cors_origins_count": len(settings.ALLOWED_ORIGINS),
+        "rag_indexed": rag_engine.is_indexed,
+        "rag_corpus_size": len(rag_engine.corpus),
+        "safe_recordings_root": settings.SAFE_RECORDINGS_ROOT,
     }
 
 @app.post(f"{settings.API_V1_STR}/chat/message")

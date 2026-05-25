@@ -5,8 +5,12 @@ fastapi>=0.100.0
 uvicorn>=0.22.0
 pydantic>=2.0
 
-# HTTP Client (for Gemini API calls)
+# HTTP Client (for Gemini API calls and FastAPI TestClient)
 httpx>=0.24.0
 
 # Security - Environment variable management
 python-dotenv>=1.0.0
+
+# Testing Suite (CODEX Step 20 audit finding: pytest-asyncio missing)
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
