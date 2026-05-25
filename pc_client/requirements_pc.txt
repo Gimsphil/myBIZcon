@@ -1,0 +1,18 @@
+# myBIZcon PC Desktop Client - Requirements
+# ==========================================
+# Core GUI
+tkinter
+
+# HTTP Client (communicates with FastAPI backend)
+httpx>=0.24.0
+
+# Audio Capture (WASAPI Loopback + Mic)
+# Uncomment when building for production:
+# pyaudio>=0.2.13
+# soundcard>=0.4.2
+
+# EXE Packaging (build-time only)
+pyinstaller>=5.0
+
+# Environment variable management
+python-dotenv>=1.0.0

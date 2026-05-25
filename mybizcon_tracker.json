@@ -1,9 +1,9 @@
 {
   "project_name": "myBIZcon",
-  "run_count": 14,
-  "current_stage": "Phase 5: AI Reviewer Dialogue Archive & Core System Control (Complete)",
-  "last_updated": "2026-05-25T11:35:55+07:00",
-  "last_commit_hash": "4fbd1d15cb36da54c716968fce789cb7fa02feca",
+  "run_count": 17,
+  "current_stage": "Phase 6: Security Hardening, Integration Testing & EXE Deployment Prep (In Progress)",
+  "last_updated": "2026-05-25T11:55:00+07:00",
+  "last_commit_hash": "pending-phase6-commit",
   "operations_log": [
     {
       "step": 1,
@@ -115,6 +115,27 @@
       "description": "Formally enforced push gate restriction limiting GitHub commit and push rights solely to the AI Reviewer (Antigravity). Wrote a custom robust PowerShell parsing script to decode JSONL conversation transcripts into high-fidelity UTF-8 with BOM formats, resolving emojis and Korean CP949 encoding bugs. Archived the full chat screen history to agent_dialogue_archive.md.",
       "status": "SUCCESS",
       "commit_hash": "4fbd1d15cb36da54c716968fce789cb7fa02feca"
+    },
+    {
+      "step": 15,
+      "timestamp": "2026-05-25T11:50:00+07:00",
+      "action": "Phase 6 Step 15 - AGY: Security Hardening (CORS, API Key Auth, Path Traversal)",
+      "description": "Upgraded backend/app/config.py with SECRET_API_KEY, ALLOWED_ORIGINS whitelist, SAFE_RECORDINGS_ROOT env vars and python-dotenv support. Hardened main.py: replaced wildcard CORS with env-based whitelist, added X-API-Key dependency for /workspace/index, added path traversal guard (validate_recording_path) for /voice/meeting. Updated requirements.txt with python-dotenv.",
+      "status": "SUCCESS"
+    },
+    {
+      "step": 16,
+      "timestamp": "2026-05-25T11:52:00+07:00",
+      "action": "Phase 6 Step 16 - CODEX: Integration Test Suite (pytest-based)",
+      "description": "Created backend/tests/ directory with __init__.py, test_rag_engine.py (19 test cases covering corpus indexing, TF-IDF, cosine similarity, tokenization, retrieval), test_api_endpoints.py (smoke tests for all FastAPI endpoints including security guard validation), test_relationship_engine.py (platform adapter routing, Korean honorifics, FAMILY/BOSS tone, async mocked generate_replies).",
+      "status": "SUCCESS"
+    },
+    {
+      "step": 17,
+      "timestamp": "2026-05-25T11:54:00+07:00",
+      "action": "Phase 6 Step 17 - AGY: PC Client PyInstaller EXE Deployment Prep",
+      "description": "Created pc_client/pyinstaller_build.spec (single-file windowed EXE spec with hiddenimports for tkinter, threading, audio), pc_client/build_exe.bat (auto-build Windows batch script with error handling and UX feedback), pc_client/requirements_pc.txt (includes pyinstaller>=5.0 and python-dotenv). All 5 new/modified files passed py_compile syntax checks.",
+      "status": "SUCCESS"
     }
   ]
 }

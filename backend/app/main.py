@@ -1,6 +1,18 @@
+# -*- coding: utf-8 -*-
+"""
+myBIZcon FastAPI Backend - Main Application
+===========================================
+AGY Step 15 Security Hardening applied:
+  - CORS whitelist from ALLOWED_ORIGINS env var (no more wildcard *)
+  - X-API-Key header authentication on sensitive endpoints
+  - Path traversal protection on /voice/meeting file_path parameter
+
+Role flow: AGY (Coder) → Antigravity (Reviewer/Push Gate)
+"""
+import os
 import logging
 from typing import List, Optional
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Depends, Header
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -23,10 +35,45 @@ app = FastAPI(
     description="Universal AI Business Assistant (myBIZcon) API Server"
 )
 
-# CORS configuration for cross-platform clients
+# ── Security: API Key Authentication Dependency ────────────────────────────
+def verify_api_key(x_api_key: str = Header(..., alias="X-API-Key")):
+    """
+    Validates the X-API-Key header against the configured SECRET_API_KEY.
+    Used on sensitive admin endpoints to prevent unauthorized access.
+    """
+    if x_api_key != settings.SECRET_API_KEY:
+        logger.warning("⛔ Unauthorized API Key attempt blocked.")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid API Key. Access denied."
+        )
+    return x_api_key
+
+
+# ── Security: Path Traversal Guard ─────────────────────────────────────────
+def validate_recording_path(file_path: str) -> str:
+    """
+    Ensures the provided file_path resolves strictly within the
+    SAFE_RECORDINGS_ROOT directory. Prevents directory traversal attacks.
+    """
+    safe_root = settings.SAFE_RECORDINGS_ROOT
+    abs_path = os.path.abspath(file_path)
+    if not abs_path.startswith(safe_root):
+        logger.warning(f"⛔ Path traversal attempt blocked: {file_path!r}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                f"Access denied. Recording files must reside within the "
+                f"designated recordings directory."
+            )
+        )
+    return abs_path
+
+
+# ── CORS: Whitelist from environment (no more wildcard *) ──────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -137,11 +184,12 @@ def archive_transcript(payload: BackupPayload):
     return result
 
 @app.post(f"{settings.API_V1_STR}/workspace/index")
-def trigger_rag_indexing():
+def trigger_rag_indexing(api_key: str = Depends(verify_api_key)):
     """
     Triggers manual indexing of archived Markdown documents to generate TF-IDF RAG weights.
+    🔐 PROTECTED: Requires valid X-API-Key header (Step 15 Security Hardening).
     """
-    logger.info("⚡ RAG Index trigger requested via API.")
+    logger.info("⚡ RAG Index trigger requested via API (authenticated).")
     rag_engine.reindex_corpus()
     return {"status": "SUCCESS", "message": f"RAG Corpus indexed with {len(rag_engine.corpus)} documents."}
 
@@ -152,9 +200,11 @@ async def process_voice_meeting(payload: VoiceMeetingPayload):
     """
     Ingests recorded meeting audio file, performs diarization,
     summarization, and triggers automated workspace sync.
+    🔐 PATH GUARD: file_path validated against SAFE_RECORDINGS_ROOT (Step 15 Security Hardening).
     """
-    logger.info(f"🎙️ Request to diarize meeting audio: '{payload.file_path}'")
-    result = await diarization_engine.process_audio_meeting(payload.file_path)
+    safe_path = validate_recording_path(payload.file_path)
+    logger.info(f"🎙️ Request to diarize meeting audio (path validated): '{safe_path}'")
+    result = await diarization_engine.process_audio_meeting(safe_path)
     return result
 
 @app.post(f"{settings.API_V1_STR}/voice/stt")

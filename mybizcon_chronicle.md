@@ -146,6 +146,42 @@ myBIZcon/
 
 ---
 
+### 🔐 Step 15: AGY - Phase 6 Security Hardening (Step 15)
+*   **Trigger**: Antigravity (기술 검토자) identified 3 critical security gaps in Step 13 reviewer findings: permissive CORS, unauthenticated RAG reindex endpoint, and path-traversal risk on voice file ingestion.
+*   **Action**: AGY (1st Coder) implemented security hardening across `config.py`, `main.py`, and `requirements.txt`.
+*   **Feats Added**:
+    *   **`config.py` Upgrade**: Added `SECRET_API_KEY` (env var), `ALLOWED_ORIGINS` (whitelist list), `SAFE_RECORDINGS_ROOT` (safe path root), `python-dotenv` support for `.env` file loading.
+    *   **`main.py` CORS Hardening**: Replaced wildcard `allow_origins=["*"]` with `settings.ALLOWED_ORIGINS` (env-var-driven whitelist). Default: `localhost:8000, 127.0.0.1:8000, localhost:3000`.
+    *   **`main.py` API Key Auth**: Added `verify_api_key()` FastAPI dependency validating `X-API-Key` header against `SECRET_API_KEY`. Applied to `/workspace/index` endpoint (RAG reindex protection).
+    *   **`main.py` Path Guard**: Added `validate_recording_path()` function using `os.path.abspath()` prefix check against `SAFE_RECORDINGS_ROOT`. Applied to `/voice/meeting` endpoint.
+    *   **`requirements.txt`**: Added `python-dotenv>=1.0.0`.
+*   **Syntax Check**: All files passed `py_compile` successfully.
+
+### 🧪 Step 16: CODEX - Integration Test Suite (Step 16)
+*   **Action**: CODEX (2nd Coder / Auditor) built a comprehensive `pytest`-based integration test suite for all major backend modules.
+*   **Feats Added**:
+    *   `backend/tests/__init__.py`: Package initializer.
+    *   `backend/tests/test_rag_engine.py`: 19 test cases across 5 classes:
+        - `TestRAGCorpusIndexing`: corpus loading, IDF positivity, reindex rebuild.
+        - `TestCosineSimilarity`: identical (→1.0), empty (→0.0), orthogonal (→0.0), partial (→(0,1)).
+        - `TestTokenization`: Latin, Korean, mixed, empty input, short token filtering.
+        - `TestSemanticRetrieval`: return type, non-empty on relevant query, graceful gibberish handling.
+    *   `backend/tests/test_api_endpoints.py`: FastAPI TestClient smoke tests:
+        - `GET /` → 200 + `ONLINE` status.
+        - `POST /workspace/index` → 403 (no key) / 403 (wrong key) / 200 (correct key).
+        - `POST /voice/meeting` → 403 (path traversal) / 403 (absolute out-of-root).
+        - `POST /copilot/search`, `POST /chat/message` → schema checks.
+    *   `backend/tests/test_relationship_engine.py`: Platform adapter routing, BOSS formal/FAMILY informal tone checks, async mocked `generate_replies()`.
+
+### 📦 Step 17: AGY - PC Client PyInstaller EXE Deployment Prep (Step 17)
+*   **Action**: AGY (1st Coder) created the complete deployment pipeline for packaging the PC Desktop Client as a standalone Windows EXE.
+*   **Feats Added**:
+    *   `pc_client/pyinstaller_build.spec`: PyInstaller Analysis/EXE spec targeting `pc_desktop_client.py`. Configured `--onefile`, `--windowed`, `upx=True` compression, and comprehensive `hiddenimports` for `tkinter`, `threading`, `audio`, `http.client`, etc.
+    *   `pc_client/build_exe.bat`: One-click Windows batch builder. Checks Python availability, auto-installs `pyinstaller` via pip, cleans previous build artifacts, runs spec, and reports success/failure with UX-friendly messages.
+    *   `pc_client/requirements_pc.txt`: Dedicated PC client dependency file. Includes `pyinstaller>=5.0`, `python-dotenv>=1.0.0`, `httpx>=0.24.0`. Optional `pyaudio` / `soundcard` commented-in for production builds.
+
+---
+
 ## 💻 5. PC Replication & Setup Instructions (Run on Any PC)
 
 To continue development on **any new machine**, simply execute the following steps:
