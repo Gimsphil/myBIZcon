@@ -16,6 +16,12 @@
 - [x] Construct FastAPI backend hooks for Google Workspace (Calendar, Tasks, Drive)
 - [x] Develop one-click Markdown serialization to Google Drive
 
+## Phase 2.5: PC Desktop Client Development & APK Build Pipeline (Completed)
+- [x] Build Tkinter-based PC Desktop Client Dashboard and layout
+- [x] Implement floating transparent Windows translation overlays
+- [x] Create system loopback audio capture integration
+- [x] Setup Android APK Gradle build scripts and compilation pathways
+
 ## Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline
 - [ ] Implement physical meeting audio recorder module
 - [ ] Create Speaker Diarization logic (distinguishing Speaker A, B, and User)
