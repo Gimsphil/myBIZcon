@@ -31,6 +31,14 @@ If this repository is cloned onto **any other PC** or opened by **any other deve
 *   **Decision**: **Android Kotlin Client** + **Python Tkinter Windows PC Client**.
 *   **Rationale**: iOS strictly forbids screen scraping accessibility services or system audio hooks. Android allows both using custom `AccessibilityService` and `MediaProjection` APIs. To provide a desktop counterpart, a local Windows PC Client has been developed using Python Tkinter, leveraging loopback audio capture for Teams/Zoom calls and transparent hover overlays.
 
+### 2.3 Role of AI Assistant: Appointment of the Technical Reviewer (검토자)
+*   **Decision**: Transitioned the AI Agent's primary function from a generative programmer to an **independent Technical Reviewer, Auditor, and Synchronization Inspector (검토자)**.
+*   **Rationale**: To maintain the highest quality of development and prevent divergence between local files and the remote repository, the AI Agent acts as a dedicated system reviewer. The AI's mandate is to:
+    1. Check and audit the local repository at `D:\Python Programs\myBIZcon`.
+    2. Monitor and verify the GitHub remote repository at `https://github.com/Gimsphil/myBIZcon` for flawless synchronization.
+    3. Analyze and recommend directions of architectural improvement and design optimizations.
+    4. Maintain comprehensive development journals, history trackers, and conversation records, ensuring no details are lost.
+
 ---
 
 ## 📁 3. Project Directory Structure
@@ -109,6 +117,11 @@ myBIZcon/
     *   `diarization_engine.py`: Sends base64-encoded WAV recording directly to Gemini 1.5 Flash's multimodal audio context. Gemini parses, diarizes speaker dialogue, and maps structured action items to Calendar, Tasks, and Drive.
     *   `copilot_search.py`: Background DuckDuckGo/Google search crawler providing dynamic business facts and contract templates to the GUI overlay.
     *   `pc_desktop_client.py` and `main.py` Updates: Registered and integrated all new Phase 3 endpoints. Added a beautiful Search-Assisted Web Copilot facts box in the PC GUI.
+
+### 🔍 Step 11: Official Appointment of the AI Reviewer & Technical Audit Setup (Step 11)
+*   **Action**: Formally appointed the AI Agent as the **Technical Reviewer, Auditor, and Synchronization Inspector (검토자)**. Established the auditing framework to monitor the local workspace `D:\Python Programs\myBIZcon`, audit remote GitHub synchronization at `https://github.com/Gimsphil/myBIZcon`, and perform technical evaluations of project direction.
+*   **Feats Added**:
+    *   `mybizcon_chronicle.md` and `mybizcon_tracker.json`: Formally registered the AI Reviewer mandate and technical audit logs.
 
 ---
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os
 import base64
 import json
@@ -19,20 +20,26 @@ Perform the following tasks:
    - "Speaker A" (e.g. Buyer / Client / Boss - remote caller)
    - "Speaker B" (User - the personal business assistant owner)
    - "Speaker C" (Other participant, if any)
-3. Translate any foreign language dialogue into professional, polite Korean business style.
-4. Formulate structured "Meeting Minutes" in Markdown format containing:
-   - Meeting title and date
-   - Attendees list
-   - Structured dialogue transcription logs
-   - Key decisions
-   - Future Action items
-5. Extract action items (Tasks) and calendar events (Schedules).
+3. Catch Speaker Voice Characteristics:
+   - Carefully analyze each speaker's vocal properties (tempo, pitch, rhythm, vocal stability, pauses, and hesitations).
+4. Perform Sentiment & Emotion Analysis:
+   - Evaluate the active emotional tone of each speaker during the flow of conversation (e.g. Professional, Confident, Pleased, Urgent, Anxious, Frustrated, Calm).
+   - Inject dynamic emotion emojis and tone state annotations into the diarized transcript blocks (e.g., "[Speaker A - Excited 😊]: ...").
+5. Formulate structured "Meeting Minutes" in Markdown format containing attendees list, transcript logs with tone/emotion labels, key decisions, and action items.
+6. Extract action items (Tasks) and calendar events (Schedules).
 
 You MUST output your final answer strictly in JSON matching the following schema:
 {
-  "transcript_markdown": "## 📝 Meeting Minutes & Transcript\\n... (formatted Markdown with dialogue speaker labels and summaries)",
+  "transcript_markdown": "## 📝 Meeting Minutes & Transcript\\n... (formatted Markdown with dialogue speaker labels, tone emojis, and summaries)",
   "summary": "Short executive summary of the conversation",
   "decisions": ["Decision 1", "Decision 2"],
+  "speaker_analysis": [
+    {
+      "speaker": "Speaker A / Speaker B",
+      "voice_profile": "Vocal speed, pitch range, rhythm or stability characteristics",
+      "sentiment_trends": "General emotional mood state of the speaker (e.g., Excited, Urgent, Calm)"
+    }
+  ],
   "tasks": [
     {
       "title": "Title of the task",
@@ -55,14 +62,14 @@ class DiarizationEngineService:
     """
     🧠 DiarizationEngineService
     Leverages Gemini 1.5 Flash's native audio multimodal context to:
-    - Diarize audio transcripts (User, Speaker A, B) directly without local heavy models.
-    - Translate and synthesize action items (Tasks/Schedules) instantly.
+    - Diarize audio transcripts (User, Speaker A, B) directly.
+    - Evaluate voice acoustic characteristics and dynamic emotional states (Sentiment analysis).
     - Back up results directly into the Google Workspace ecosystem.
     """
     async def process_audio_meeting(self, wav_file_path: str) -> dict:
         """
         Sends the WAV audio file to Gemini to perform multimodal transcription,
-        diarization, and sync mapping.
+        diarization, emotion analysis, and sync mapping.
         """
         logger.info(f"🧠 Processing meeting audio through Gemini: {wav_file_path}")
 
@@ -100,7 +107,7 @@ class DiarizationEngineService:
                             }
                         },
                         {
-                            "text": "Transcribe, diarize, and summarize this business audio recording into the specified JSON format."
+                            "text": "Transcribe, diarize speaker voices, analyze acoustic emotions, and summarize this business audio recording into the specified JSON format."
                         }
                     ]
                 }
@@ -166,34 +173,44 @@ class DiarizationEngineService:
         logger.info("✅ Workspace Sync completed successfully.")
 
     def _generate_mock_diarization(self) -> dict:
-        """High-context diarization mock data (offline fallback)."""
-        logger.info("🔮 Running offline diarized mock pipeline.")
+        """High-context diarization mock data (offline fallback) with vocal profile and emotion analytics."""
+        logger.info("🔮 Running offline diarized mock pipeline with emotion metadata.")
         mock_transcript = (
             "## 📝 회의록 (Meeting Minutes & Transcript)\n"
-            "**회의 일시**: 2026-05-25 11:15\n"
+            "**회의 일시**: 2026-05-25 11:20\n"
             "**참석자**: Speaker A (대표님 / Client), Speaker B (과장 / User)\n\n"
             "### 💬 회의 상세 기록\n"
-            "- **Speaker A**: 이번 제휴 관련해서 다음 주 수요일 전략 기획 발표회를 갖고자 하는데 일정이 비어있으실까요?\n"
-            "- **Speaker B**: 네, 대표님. 캘린더 확인 후 다음 주 수요일 오전 10시로 등록하여 진행하겠습니다.\n"
-            "- **Speaker A**: 좋습니다. 그럼 가격 가이드도 5% 인상하는 기획안을 보충해서 그 회의 때 같이 보고해 주시길 바랍니다.\n"
-            "- **Speaker B**: 알겠습니다. 5% 인상안 기획 보고서 작성하여 공유해 올리겠습니다.\n\n"
+            "- **[Speaker A - 신중함 🤔]**: 이번 제휴 관련해서 다음 주 수요일 전략 기획 발표회를 갖고자 하는데 일정이 비어있으실까요?\n"
+            "- **[Speaker B - 자신감 넘침 😎]**: 네, 대표님. 캘린더 확인 후 다음 주 수요일 오전 10시로 등록하여 진행하겠습니다.\n"
+            "- **[Speaker A - 만족스러움 😊]**: 좋습니다. 그럼 가격 가이드도 5% 인상하는 기획안을 보충해서 그 회의 때 같이 보고해 주시길 바랍니다.\n"
+            "- **[Speaker B - 정중함 💼]**: 알겠습니다. 5% 인상안 기획 보고서 작성하여 공유해 올리겠습니다.\n\n"
             "### 📌 결정 사항\n"
             "- 전략 제휴 발표회 날짜 확정 (다음 주 수요일)\n"
             "- 가격 가이드 라인 5% 인상안 반영\n"
         )
         
-        # Calculate next Wednesday at 10 AM for dynamic realism
-        # (Using a standard placeholder that's easily readable)
         today = datetime.now()
         next_wed_str = today.strftime("%Y-%m-%dT10:00:00")
         next_wed_end_str = today.strftime("%Y-%m-%dT11:00:00")
 
         mock_payload = {
             "transcript_markdown": mock_transcript,
-            "summary": "전략 제휴 컨퍼런스 일정 수립 및 가격 가이드 라인 5% 인상 기획서 보고 조율.",
+            "summary": "전략 제휴 발표회 일정 확정 및 가격 5% 인상안 추가 기획 보고 조율.",
             "decisions": [
                 "다음 주 수요일 미팅 진행",
                 "가격 5% 인상안 기획 및 반영 결정"
+            ],
+            "speaker_analysis": [
+                {
+                    "speaker": "Speaker A (Client)",
+                    "voice_profile": "다소 느린 템포, 안정적이고 차분한 피치, 숙고하는 듯한 일시 정지 패턴 감지",
+                    "sentiment_trends": "신중함(Prudent) 🤔 -> 만족함(Pleased) 😊 (긍정적인 조율 흐름)"
+                },
+                {
+                    "speaker": "Speaker B (User)",
+                    "voice_profile": "명료하고 빠른 템포, 흔들림 없는 높은 목소리 톤과 안정적인 호흡 패턴 감지",
+                    "sentiment_trends": "자신감(Confident) 😎 -> 차분하고 정중함(Polite) 💼"
+                }
             ],
             "tasks": [
                 {
@@ -212,7 +229,6 @@ class DiarizationEngineService:
             ]
         }
         
-        # Save mock backup to drive too
         self._perform_workspace_sync(mock_payload)
         return mock_payload
 

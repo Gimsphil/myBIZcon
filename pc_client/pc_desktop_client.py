@@ -143,7 +143,7 @@ class PCDesktopClient:
         while True:
             try:
                 with urllib.request.urlopen(self.backend_url, timeout=3.0) as response:
-                    if response.status == 200:
+                    if response.status_code == 200:
                         self.server_status_lbl.config(text="ONLINE", fg="#00D1B2")
                     else:
                         self.server_status_lbl.config(text="ERROR", fg="#F44336")
@@ -181,12 +181,20 @@ class PCDesktopClient:
                 transcript = result.get("transcript_markdown", "")
                 summary = result.get("summary", "")
                 decisions = result.get("decisions", [])
+                speaker_analysis = result.get("speaker_analysis", [])
                 
                 facts_text = "Meeting Diarization and Workspace Sync Complete\n\n"
                 facts_text += f"Summary: {summary}\n\n"
                 facts_text += "Decisions:\n"
                 for dec in decisions:
                     facts_text += f" - {dec}\n"
+                
+                if speaker_analysis:
+                    facts_text += "\n🎙️ [화자 음성 특성 및 실시간 감정 분석]\n"
+                    for sa in speaker_analysis:
+                        facts_text += f" • {sa.get('speaker')}:\n"
+                        facts_text += f"   - 음성 분석: {sa.get('voice_profile')}\n"
+                        facts_text += f"   - 실시간 감정/톤: {sa.get('sentiment_trends')}\n"
                 
                 facts_text += "\nGoogle Workspace Synchronized:\n"
                 facts_text += " - Google Drive: Meeting Minutes archived\n"
