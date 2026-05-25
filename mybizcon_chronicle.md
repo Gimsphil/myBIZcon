@@ -91,11 +91,20 @@ myBIZcon/
         *   `google_workspace.py`: Integrates automated Google Calendar scheduling, Google Tasks, and one-click Google Drive Markdown transcript backups.
         *   `relationship_engine.py`: Connects to Gemini REST, translating messages and recommending replies.
 
-### 🖥️ Phase 2.5: PC Client & APK Build Setup (Step 7 - 8)
+### 🖥️ Phase 2.5: PC Client & APK Build Setup (Step 7 - 9)
 *   **Action**: Built desktop version and compiled APK packaging tools based on user's new pivot requests.
 *   **Feats Added**:
     *   `pc_desktop_client.py`: Dark-themed slate Tkinter GUI. Implements PC audio capture toggle, live dashboard, meeting minutes sync pipelines, and a **draggable, transparent Windows Subtitle Overlay** that floats over active desktop apps.
     *   `android/build_apk.bat`: Double-click batch script for compiling Android Kotlin app to APK using Gradle or local fallback. Supported by full `build.gradle` structures.
+    *   `mybizcon_chronicle.md`: Created and synchronized this development chronicle to ensure high-fidelity replication context.
+
+### 🎙️ Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline [In Progress] (Step 10)
+*   **Action**: Designed and formalized Phase 3 architectural blueprints in the implementation plan.
+*   **Features Proposed**:
+    *   **Threaded Hybrid Audio Recording**: PC-side audio capture using `sounddevice` and `numpy` with WASAPI loopback, complemented by a zero-dependency dynamic synthetic recording fallback generator.
+    *   **Gemini Multimodal Diarization**: High-performance joint transcribing, translating, and speaker separation directly utilizing Google Gemini 1.5 Flash's native WAV audio processing capabilities.
+    *   **Dual-Tier TTS Engine**: Standard offline/free Google TTS (`gTTS`) combined with a premium ElevenLabs API option.
+    *   **Search-Assisted Web Copilot**: Background asynchronous web search entity lookup displaying contextual Fact Bubbles inside the transparent PC overlay.
 
 ---
 

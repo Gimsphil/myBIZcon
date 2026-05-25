@@ -22,12 +22,12 @@
 - [x] Create system loopback audio capture integration
 - [x] Setup Android APK Gradle build scripts and compilation pathways
 
-## Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline
-- [ ] Implement physical meeting audio recorder module
-- [ ] Create Speaker Diarization logic (distinguishing Speaker A, B, and User)
-- [ ] Set up Whisper STT and Gemini translation pipeline
-- [ ] Set up TTS voice generation pipeline (ElevenLabs or Google TTS)
-- [ ] Develop Search-Assisted Web Copilot (background search during meetings/chats)
+## Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline (Planning & In Progress)
+- [/] Implement physical meeting audio recorder module
+- [/] Create Speaker Diarization logic (distinguishing Speaker A, B, and User)
+- [/] Set up Whisper STT and Gemini translation pipeline
+- [/] Set up TTS voice generation pipeline (ElevenLabs or Google TTS)
+- [/] Develop Search-Assisted Web Copilot (background search during meetings/chats)
 
 ## Phase 4: Multi-Messenger & Personalization (RAG)
 - [ ] Add KakaoTalk, Slack, and Telegram accessibility scraper configurations
