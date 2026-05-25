@@ -35,3 +35,8 @@
 - [x] Upgrade Gemini multimodal prompts in `diarization_engine.py` for acoustic diarization characteristics & emotion extraction
 - [x] Enhance pc client GUI to show diarized emotion metadata
 - [x] Write walkthrough report and push updates to Git
+
+## Phase 4: Multi-Messenger & Personalization (RAG) (Completed)
+- [x] Add KakaoTalk, Slack, and Telegram accessibility scraper configurations (adapters)
+- [x] Set up local vector database pipeline (TF-IDF & Cosine Similarity vector space)
+- [x] Implement historical transcript RAG indexer to adapt to user's personal writing style

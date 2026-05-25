@@ -11,6 +11,7 @@ from app.services.google_workspace import google_workspace
 from app.services.diarization_engine import diarization_engine
 from app.services.voice_service import voice_service
 from app.services.copilot_search import copilot_search
+from app.services.rag_engine import rag_engine
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +23,7 @@ app = FastAPI(
     description="Universal AI Business Assistant (myBIZcon) API Server"
 )
 
-# CORS configuration for cross-platform clients (Android Emulator, custom dashboards, etc.)
+# CORS configuration for cross-platform clients
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -38,6 +39,7 @@ class ChatMessagePayload(BaseModel):
     conversation_title: str
     relationship: Optional[str] = "COWORKER"
     is_group: Optional[bool] = False
+    platform: Optional[str] = "WHATSAPP"
 
 class CalendarEventPayload(BaseModel):
     summary: str
@@ -81,8 +83,9 @@ def read_root():
 async def process_chat_message(payload: ChatMessagePayload):
     """
     Scrapes and syncs message from Android Accessibility client.
+    Supports dynamic few-shot style emulation via local RAG TF-IDF engine.
     """
-    logger.info(f"✉️ Processing incoming scraped message from '{payload.sender}'")
+    logger.info(f"✉️ Processing incoming scraped message from '{payload.sender}' on platform '{payload.platform}'")
     is_group_chat = payload.is_group or "Group" in payload.conversation_title or "," in payload.conversation_title
     
     relationship_profile = payload.relationship
@@ -97,7 +100,8 @@ async def process_chat_message(payload: ChatMessagePayload):
         sender=payload.sender,
         content=payload.content,
         relationship=relationship_profile,
-        is_group=is_group_chat
+        is_group=is_group_chat,
+        platform=payload.platform
     )
     return result
 
@@ -131,6 +135,15 @@ def archive_transcript(payload: BackupPayload):
         folder_name=payload.folder_name
     )
     return result
+
+@app.post(f"{settings.API_V1_STR}/workspace/index")
+def trigger_rag_indexing():
+    """
+    Triggers manual indexing of archived Markdown documents to generate TF-IDF RAG weights.
+    """
+    logger.info("⚡ RAG Index trigger requested via API.")
+    rag_engine.reindex_corpus()
+    return {"status": "SUCCESS", "message": f"RAG Corpus indexed with {len(rag_engine.corpus)} documents."}
 
 # --- Phase 3 Voice & Audio Endpoints ---
 

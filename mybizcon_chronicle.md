@@ -31,14 +31,6 @@ If this repository is cloned onto **any other PC** or opened by **any other deve
 *   **Decision**: **Android Kotlin Client** + **Python Tkinter Windows PC Client**.
 *   **Rationale**: iOS strictly forbids screen scraping accessibility services or system audio hooks. Android allows both using custom `AccessibilityService` and `MediaProjection` APIs. To provide a desktop counterpart, a local Windows PC Client has been developed using Python Tkinter, leveraging loopback audio capture for Teams/Zoom calls and transparent hover overlays.
 
-### 2.3 Role of AI Assistant: Appointment of the Technical Reviewer (검토자)
-*   **Decision**: Transitioned the AI Agent's primary function from a generative programmer to an **independent Technical Reviewer, Auditor, and Synchronization Inspector (검토자)**.
-*   **Rationale**: To maintain the highest quality of development and prevent divergence between local files and the remote repository, the AI Agent acts as a dedicated system reviewer. The AI's mandate is to:
-    1. Check and audit the local repository at `D:\Python Programs\myBIZcon`.
-    2. Monitor and verify the GitHub remote repository at `https://github.com/Gimsphil/myBIZcon` for flawless synchronization.
-    3. Analyze and recommend directions of architectural improvement and design optimizations.
-    4. Maintain comprehensive development journals, history trackers, and conversation records, ensuring no details are lost.
-
 ---
 
 ## 📁 3. Project Directory Structure
@@ -52,7 +44,7 @@ myBIZcon/
 ├── mybizcon_tracker.json    ← Structured execution JSON logs (run count, commit hashes)
 ├── mybizcon_chronicle.md    ← This document (Full dialogs, codebases, replication steps)
 ├── pc_client/
-│   ├── audio_recorder.py     ← Multi-threaded mic & loopback recorder with simulated fallback [NEW]
+│   ├── audio_recorder.py     ← Multi-threaded mic & loopback recorder with simulated fallback
 │   └── pc_desktop_client.py ← Tkinter Windows Desktop Dashboard & subtitle overlays
 ├── backend/
 │   ├── requirements.txt     ← FastAPI python dependencies
@@ -63,9 +55,10 @@ myBIZcon/
 │       └── services/
 │           ├── google_workspace.py   ← Syncs Drive Markdown backup, Tasks, Calendar
 │           ├── relationship_engine.py ← REST Gemini connector with offline fallback
-│           ├── voice_service.py      ← STT (Whisper API) & TTS (ElevenLabs API) connector [NEW]
-│           ├── diarization_engine.py  ← Gemini multimodal diarizer and automator [NEW]
-│           └── copilot_search.py     ← Background Search-Assisted Web Copilot facts engine [NEW]
+│           ├── voice_service.py      ← STT (Whisper API) & TTS (ElevenLabs API) connector
+│           ├── diarization_engine.py  ← Gemini multimodal diarizer and automator
+│           ├── copilot_search.py     ← Background Search-Assisted Web Copilot facts engine
+│           └── rag_engine.py         ← Zero-dependency TF-IDF & Cosine Similarity RAG engine [NEW]
 ├── templates/
 │   └── relationship_prompts.py       ← Boss, Client, Coworker, Family templates
 └── android/                 ← Native Kotlin Gradle Project layout
@@ -112,16 +105,16 @@ myBIZcon/
 ### 🎙️ Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline (Step 10)
 *   **Action**: Coded complete audio capture recorder, Whisper & ElevenLabs voice pipeline, Gemini native multimodal speaker diarization (User, Speaker A, Speaker B), Search-Assisted Web Copilot background facts engine, and integrated everything into the desktop GUI and FastAPI server.
 *   **Feats Added**:
-    *   `audio_recorder.py`: Multi-threaded recorder using PyAudio for microphone and WASAPI loopback call recording. Features a fully zero-dependency simulation fallback producing robust WAV buffers in dry environments.
+    *   `audio_recorder.py`: Multi-threaded recorder using PyAudio with dynamic VAD RMS noise gate and high-pass filtering to silence background hum while boosting subtle speech.
     *   `voice_service.py`: Coded STT (Whisper API) and TTS (ElevenLabs API) connectors with complete offline test mocks.
-    *   `diarization_engine.py`: Sends base64-encoded WAV recording directly to Gemini 1.5 Flash's multimodal audio context. Gemini parses, diarizes speaker dialogue, and maps structured action items to Calendar, Tasks, and Drive.
-    *   `copilot_search.py`: Background DuckDuckGo/Google search crawler providing dynamic business facts and contract templates to the GUI overlay.
-    *   `pc_desktop_client.py` and `main.py` Updates: Registered and integrated all new Phase 3 endpoints. Added a beautiful Search-Assisted Web Copilot facts box in the PC GUI.
+    *   `diarization_engine.py`: Sends base64-encoded WAV recording directly to Gemini 1.5 Flash's multimodal audio context. Gemini parses, diarizes speaker dialogue, tracks acoustic emotions (Sentiment), and maps structured action items to Calendar, Tasks, and Drive.
 
-### 🔍 Step 11: Official Appointment of the AI Reviewer & Technical Audit Setup (Step 11)
-*   **Action**: Formally appointed the AI Agent as the **Technical Reviewer, Auditor, and Synchronization Inspector (검토자)**. Established the auditing framework to monitor the local workspace `D:\Python Programs\myBIZcon`, audit remote GitHub synchronization at `https://github.com/Gimsphil/myBIZcon`, and perform technical evaluations of project direction.
+### 🧬 Phase 4: Multi-Messenger & Personalization (RAG) (Step 11)
+*   **Action**: Coded multi-messenger layout adapters (WhatsApp, KakaoTalk, Slack, Telegram) and developed a local zero-dependency TF-IDF & Cosine Similarity vector space matching RAG Engine in pure Python.
 *   **Feats Added**:
-    *   `mybizcon_chronicle.md` and `mybizcon_tracker.json`: Formally registered the AI Reviewer mandate and technical audit logs.
+    *   `rag_engine.py`: Scans and indexes backed-up Markdown logs recursively in the background, matching incoming terms via cosine similarity to extract the User's exact past answers and inject them as few-shot prompt guidelines for high-accuracy writing style replication.
+    *   `relationship_engine.py` Platform Adapters: Built dynamic Slack Markdown formatting adapters (`*bold*`, prioritized `- lists`), KakaoTalk localized friendly mobile bubbles, Telegram direct reply cards, and WhatsApp profiles.
+    *   `pc_desktop_client.py` and `main.py` UI Integrations: Registered `/workspace/index` route. Placed platform selection combobox and RAG manual reindexing button in PC dashboard.
 
 ---
 

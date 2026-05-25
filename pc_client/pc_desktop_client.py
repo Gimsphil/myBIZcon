@@ -15,12 +15,13 @@ class PCDesktopClient:
     """
     PCDesktopClient
     A premium Tkinter-based Windows desktop client for myBIZcon.
+    Features platform selector adapters and RAG writing style tracking.
     """
 
     def __init__(self, root):
         self.root = root
         self.root.title("myBIZcon - AI Business Assistant (PC Version)")
-        self.root.geometry("900x620")
+        self.root.geometry("920x640")
         self.root.configure(bg="#1E1E2E")
 
         # API & Recording Configurations
@@ -104,6 +105,10 @@ class PCDesktopClient:
         self.path_lbl.config(state="readonly")
         self.path_lbl.pack(fill="x")
 
+        # RAG Manual Trigger Button [NEW]
+        self.index_btn = ttk.Button(control_card, text="🔄 REINDEX LOCAL RAG CORPUS", style="TButton", command=self.trigger_manual_indexing)
+        self.index_btn.pack(fill="x", pady=(20, 0))
+
         right_col = ttk.Frame(body_frame)
         right_col.pack(side="right", fill="both", expand=True)
 
@@ -123,9 +128,15 @@ class PCDesktopClient:
         action_frame = ttk.Frame(sim_card)
         action_frame.pack(fill="x", pady=5)
         
+        # Senders profile selector
         self.relation_var = tk.StringVar(value="BOSS")
-        self.relation_combo = ttk.Combobox(action_frame, textvariable=self.relation_var, values=["BOSS", "CLIENT", "COWORKER", "FAMILY"], state="readonly", width=15)
-        self.relation_combo.pack(side="left", padx=(0, 10))
+        self.relation_combo = ttk.Combobox(action_frame, textvariable=self.relation_var, values=["BOSS", "CLIENT", "COWORKER", "FAMILY"], state="readonly", width=10)
+        self.relation_combo.pack(side="left", padx=(0, 5))
+
+        # Platfrom Profile selector [NEW]
+        self.platform_var = tk.StringVar(value="WhatsApp")
+        self.platform_combo = ttk.Combobox(action_frame, textvariable=self.platform_var, values=["WhatsApp", "KakaoTalk", "Slack", "Telegram"], state="readonly", width=10)
+        self.platform_combo.pack(side="left", padx=(0, 10))
 
         ttk.Button(action_frame, text="SYNC MESSAGE & TRANSLATE", command=self.sync_and_translate).pack(side="right", fill="x", expand=True)
 
@@ -150,6 +161,17 @@ class PCDesktopClient:
             except Exception:
                 self.server_status_lbl.config(text="OFFLINE", fg="#F44336")
             time.sleep(5)
+
+    def trigger_manual_indexing(self):
+        """Asks backend to reindex the local RAG text backups."""
+        url = f"{self.backend_url}/workspace/index"
+        req = urllib.request.Request(url, data=b"", headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                messagebox.showinfo("RAG Engine Corpus Indexing", result.get("message", "Corpus indexed successfully!"))
+        except Exception as e:
+            messagebox.showerror("Indexing Error", f"Failed to connect to RAG indexer: {str(e)}")
 
     def toggle_recording(self):
         self.is_recording = not self.is_recording
@@ -212,6 +234,7 @@ class PCDesktopClient:
         sender = self.sender_entry.get().strip()
         content = self.message_txt.get("1.0", "end-1c").strip()
         relation = self.relation_var.get()
+        platform = self.platform_var.get()
 
         if not content:
             messagebox.showwarning("Warning", "Please enter message content.")
@@ -222,7 +245,8 @@ class PCDesktopClient:
             "content": content,
             "conversation_title": sender,
             "relationship": relation,
-            "is_group": False
+            "is_group": False,
+            "platform": platform
         }
 
         threading.Thread(target=self._post_message_to_api, args=(payload,), daemon=True).start()
