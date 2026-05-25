@@ -128,8 +128,8 @@ class TranslationOverlayService : Service() {
                         setBackgroundColor(0xFF2E7D32.toInt()) // Deep Emerald Green for action cards
                         setPadding(20, 10, 20, 10)
                         setOnClickListener {
-                            // Inject reply text directly to input field
-                            MyBIZconAccessibilityService().injectSuggestedReply(content)
+                            // Inject reply text through the active AccessibilityService instance.
+                            MyBIZconAccessibilityService.injectIntoActiveMessenger(content)
                             removeFloatingOverlay()
                         }
                     }

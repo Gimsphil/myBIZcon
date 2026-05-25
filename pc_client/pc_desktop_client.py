@@ -25,10 +25,14 @@ class PCDesktopClient:
         self.root.configure(bg="#1E1E2E")
 
         # API & Recording Configurations
-        self.backend_url = "http://localhost:8000/api/v1"
+        self.backend_base_url = os.getenv("MYBIZCON_BACKEND_URL", "http://localhost:8000").rstrip("/")
+        self.backend_url = f"{self.backend_base_url}/api/v1"
+        self.api_key = os.getenv("MYBIZCON_API_KEY") or os.getenv("SECRET_API_KEY", "dev-insecure-key")
         self.is_recording = False
         self.active_overlay = None
-        self.audio_path = os.path.join(os.getcwd(), "meeting_capture.wav")
+        self.recordings_dir = os.path.abspath(os.getenv("SAFE_RECORDINGS_ROOT", os.path.join(os.getcwd(), "recordings")))
+        os.makedirs(self.recordings_dir, exist_ok=True)
+        self.audio_path = os.path.join(self.recordings_dir, "meeting_capture.wav")
         self.recorder = None
 
         # Apply Premium UI Styles
@@ -153,8 +157,8 @@ class PCDesktopClient:
     def ping_backend_server(self):
         while True:
             try:
-                with urllib.request.urlopen(self.backend_url, timeout=3.0) as response:
-                    if response.status_code == 200:
+                with urllib.request.urlopen(f"{self.backend_base_url}/health", timeout=3.0) as response:
+                    if response.status == 200:
                         self.server_status_lbl.config(text="ONLINE", fg="#00D1B2")
                     else:
                         self.server_status_lbl.config(text="ERROR", fg="#F44336")
@@ -162,10 +166,22 @@ class PCDesktopClient:
                 self.server_status_lbl.config(text="OFFLINE", fg="#F44336")
             time.sleep(5)
 
+    def _build_json_request(self, url, payload=None, extra_headers=None):
+        """Builds a UTF-8 JSON request with shared myBIZcon headers."""
+        headers = {"Content-Type": "application/json"}
+        if extra_headers:
+            headers.update(extra_headers)
+        data = None if payload is None else json.dumps(payload).encode("utf-8")
+        return urllib.request.Request(url, data=data, headers=headers)
+
     def trigger_manual_indexing(self):
         """Asks backend to reindex the local RAG text backups."""
         url = f"{self.backend_url}/workspace/index"
-        req = urllib.request.Request(url, data=b"", headers={"Content-Type": "application/json"})
+        req = self._build_json_request(
+            url,
+            payload={},
+            extra_headers={"X-API-Key": self.api_key}
+        )
         try:
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
@@ -192,11 +208,7 @@ class PCDesktopClient:
     def process_meeting_recording(self):
         url = f"{self.backend_url}/voice/meeting"
         payload = {"file_path": self.audio_path}
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
-        )
+        req = self._build_json_request(url, payload)
         try:
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
@@ -264,11 +276,7 @@ class PCDesktopClient:
     def trigger_copilot_search(self, query):
         url = f"{self.backend_url}/copilot/search"
         payload = {"query": query}
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
-        )
+        req = self._build_json_request(url, payload)
         try:
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
@@ -292,11 +300,7 @@ class PCDesktopClient:
 
     def _post_message_to_api(self, payload):
         url = f"{self.backend_url}/chat/message"
-        req = urllib.request.Request(
-            url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={"Content-Type": "application/json"}
-        )
+        req = self._build_json_request(url, payload)
 
         try:
             with urllib.request.urlopen(req) as response:

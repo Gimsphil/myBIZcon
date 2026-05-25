@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Env / credentials
+.env
+credentials.json
+token.json
+
+# Local runtime artifacts
+recordings/
+drive_backups/
+*.wav
+
+# PC build outputs
+pc_client/build/
+pc_client/dist/
+pc_client/*.spec.bak
+
+# Android / Gradle outputs
+android/.gradle/
+android/**/build/
+android/*.apk
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

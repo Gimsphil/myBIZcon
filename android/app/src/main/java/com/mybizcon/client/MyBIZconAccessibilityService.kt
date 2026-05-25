@@ -26,6 +26,12 @@ class MyBIZconAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "myBIZcon_AccessService"
         private const val BACKEND_URL = "http://10.0.2.2:8000/api/v1/chat/message" // Localhost via Android Emulator
+        private var activeInstance: MyBIZconAccessibilityService? = null
+
+        fun injectIntoActiveMessenger(draftText: String): Boolean {
+            // Routes overlay-selected reply text to the running accessibility service.
+            return activeInstance?.injectSuggestedReply(draftText) == true
+        }
         
         // Node Resource IDs for unmodified WhatsApp layouts (crucial for targeted scraping)
         private const val WHATSAPP_MESSAGE_TEXT_ID = "com.whatsapp:id/message_text"
@@ -39,6 +45,7 @@ class MyBIZconAccessibilityService : AccessibilityService() {
 
     override fun onServiceConnected() {
         super.onServiceConnected()
+        activeInstance = this
         Log.i(TAG, "🟢 myBIZcon Accessibility Service connected successfully.")
     }
 
@@ -163,8 +170,8 @@ class MyBIZconAccessibilityService : AccessibilityService() {
      * 2.3 Real-Time Suggested Reply Generator: Human-in-the-Loop text injection.
      * Receives the user's selected draft from the overlay UI and injects it into WhatsApp's input box.
      */
-    fun injectSuggestedReply(draftText: String) {
-        val rootNode = rootInActiveWindow ?: return
+    fun injectSuggestedReply(draftText: String): Boolean {
+        val rootNode = rootInActiveWindow ?: return false
         val inputNodes = rootNode.findAccessibilityNodeInfosByViewId(WHATSAPP_INPUT_TEXT_ID)
         
         if (inputNodes != null && inputNodes.isNotEmpty()) {
@@ -173,14 +180,23 @@ class MyBIZconAccessibilityService : AccessibilityService() {
                 putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, draftText)
             }
             // Perform accessibility input injection
-            inputNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
+            val injected = inputNode.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, arguments)
             Log.i(TAG, "✍️ Injected Draft Suggestion to Input Box: $draftText")
+            return injected
         } else {
             Log.e(TAG, "❌ Could not locate WhatsApp input entry box.")
+            return false
         }
     }
 
     override fun onInterrupt() {
         Log.w(TAG, "⚠️ Accessibility service interrupted.")
+    }
+
+    override fun onDestroy() {
+        if (activeInstance === this) {
+            activeInstance = null
+        }
+        super.onDestroy()
     }
 }
