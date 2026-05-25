@@ -180,6 +180,15 @@ myBIZcon/
     *   `pc_client/build_exe.bat`: One-click Windows batch builder. Checks Python availability, auto-installs `pyinstaller` via pip, cleans previous build artifacts, runs spec, and reports success/failure with UX-friendly messages.
     *   `pc_client/requirements_pc.txt`: Dedicated PC client dependency file. Includes `pyinstaller>=5.0`, `python-dotenv>=1.0.0`, `httpx>=0.24.0`. Optional `pyaudio` / `soundcard` commented-in for production builds.
 
+### Step 22: Session Resume Kit at `D:\myBIZcon`
+*   **Action**: Prepared a local scan-first resume entry so the next session can start by scanning `D:\myBIZcon`.
+*   **Files Added**:
+    *   `D:\myBIZcon\AGENTS.md`: Local instruction file that points agents to the real repository and defines the default reviewer/auditor role.
+    *   `D:\myBIZcon\START_HERE.md`: Human-readable restart guide with current commit, verification commands, and next recommended work.
+    *   `D:\myBIZcon\RESUME_STATE.json`: Machine-readable resume state containing project path, GitHub URL, latest known commit, and first files to inspect.
+    *   `NEXT_SESSION_START.md`: Repository-tracked copy of the restart context so GitHub also preserves the resume instructions.
+*   **Sync Baseline**: Last verified synced commit before preparing the resume kit was `56c0beb9d3f63e32cda1dd44ef4af3652690150b`.
+
 ---
 
 ## 💻 5. PC Replication & Setup Instructions (Run on Any PC)
