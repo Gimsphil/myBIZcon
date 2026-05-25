@@ -116,6 +116,14 @@ myBIZcon/
     *   `relationship_engine.py` Platform Adapters: Built dynamic Slack Markdown formatting adapters (`*bold*`, prioritized `- lists`), KakaoTalk localized friendly mobile bubbles, Telegram direct reply cards, and WhatsApp profiles.
     *   `pc_desktop_client.py` and `main.py` UI Integrations: Registered `/workspace/index` route. Placed platform selection combobox and RAG manual reindexing button in PC dashboard.
 
+### 🔍 Step 12: AI Reviewer (검토자) Remote Control of agy and codex CLIs (Step 12)
+*   **Action**: Integrated configurations for the AI Reviewer to monitor, control, and auto-approve the local `agy` and `codex` command-line interfaces.
+*   **Feats Added**:
+    *   **Auto-Approval Mechanism Analysis**: Inspected local installation paths (`AppData\Local\agy` and `AppData\Roaming\npm\codex.ps1`). Identified and documented specific execution bypass flags:
+        - `agy`: `--dangerously-skip-permissions` to auto-approve tool permissions.
+        - `codex`: `--dangerously-bypass-approvals-and-sandbox` or `-a never` (ask-for-approval never) to bypass prompt popups.
+    *   **Reviewer Mandate Documentation**: Formalized these options into the chronicle guide, empowering the AI Reviewer to provide seamless unblocked command auditing and system control.
+
 ---
 
 ## 💻 5. PC Replication & Setup Instructions (Run on Any PC)

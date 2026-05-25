@@ -40,3 +40,8 @@
 - [x] Add KakaoTalk, Slack, and Telegram accessibility scraper configurations (adapters)
 - [x] Set up local vector database pipeline (TF-IDF & Cosine Similarity vector space)
 - [x] Implement historical transcript RAG indexer to adapt to user's personal writing style
+
+## Phase 5: AI Reviewer CLI Auto-Approve Integration (Completed)
+- [x] Formally appoint the AI Assistant as the Technical Reviewer & Auditor (검토자)
+- [x] Integrate automatic approval bypass flags for local `agy` and `codex` CLIs
+- [x] Synchronize permanent logs, chronicle database, and remote Git repository
