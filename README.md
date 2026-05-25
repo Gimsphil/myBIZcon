@@ -21,6 +21,15 @@
 *   **Tasks & Keep Integration**: Saves To-Dos and important memos.
 *   **Drive Archival**: Converts finished chats/meetings into clean Markdown logs for secure cloud archival.
 
+### 4. HiNoter-style AI Note Mode
+*   **One-Tap Note Capture**: Converts recording, transcript, uploaded audio metadata, or YouTube-link metadata into a structured AI note.
+*   **Speaker-Aware Notes**: Splits transcript blocks by speaker labels and keeps searchable note sections.
+*   **AI Summary & Mind Map**: Generates executive summary, keywords, action items, decisions, and a mind-map structure.
+*   **Ask AI on Recordings**: Accepts a question about the captured note and returns a grounded answer from transcript-derived summary/action items.
+*   **Keyword Jump Moments**: Produces timestamp-like searchable moments so the UI can jump to the matching audio/text segment.
+*   **Secure Sharing Contract**: Marks notes as encrypted and creates owner-controlled Markdown sharing payloads.
+*   **Calendar Auto-Join Metadata**: Keeps calendar meeting identifiers and auto-join flags ready for later approved live Workspace sync.
+
 ---
 
 ## 🛠️ Tech Stack & Architecture

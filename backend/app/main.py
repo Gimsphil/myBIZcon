@@ -29,6 +29,7 @@ from app.services.diarization_engine import diarization_engine
 from app.services.voice_service import voice_service
 from app.services.copilot_search import copilot_search
 from app.services.rag_engine import rag_engine
+from app.services.hinoter_notes import hinoter_note_service
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -123,6 +124,16 @@ class TTSPayload(BaseModel):
 
 class SearchPayload(BaseModel):
     query: str
+
+class NoteCapturePayload(BaseModel):
+    title: str
+    source_type: str = "recording"
+    source_uri: Optional[str] = None
+    transcript: str
+    speaker_labels: Optional[List[str]] = None
+    calendar_event_id: Optional[str] = None
+    auto_join_calendar: Optional[bool] = False
+    ask: Optional[str] = None
 
 # Endpoints
 
@@ -254,6 +265,31 @@ async def synthesize_text_to_voice(payload: TTSPayload):
     logger.info(f"🔊 Request to synthesize voice: '{payload.text[:20]}...'")
     audio_bytes = await voice_service.synthesize_voice(payload.text)
     return Response(content=audio_bytes, media_type="audio/wav")
+
+# --- HiNoter-style AI Note Endpoints ---
+
+@app.post(f"{settings.API_V1_STR}/notes/capture")
+def capture_ai_note(payload: NoteCapturePayload):
+    """
+    Creates a HiNoter-style structured AI note from a transcript/audio metadata payload.
+
+    Supports the feature set found in current HiNoter listings: one-tap capture,
+    speaker-aware transcription, AI summaries, mind maps, Ask AI, keyword jump,
+    calendar auto-join metadata, audio/YouTube ingestion metadata, encrypted note
+    flags, and owner-controlled sharing payloads. This endpoint is offline-safe:
+    it does not call live calendar, YouTube, or AI services by itself.
+    """
+    logger.info(f"📝 Capturing HiNoter-style AI note: '{payload.title}' ({payload.source_type})")
+    return hinoter_note_service.capture_note(
+        title=payload.title,
+        source_type=payload.source_type,
+        source_uri=payload.source_uri,
+        transcript=payload.transcript,
+        speaker_labels=payload.speaker_labels,
+        calendar_event_id=payload.calendar_event_id,
+        auto_join_calendar=bool(payload.auto_join_calendar),
+        ask=payload.ask,
+    )
 
 @app.post(f"{settings.API_V1_STR}/copilot/search")
 async def copilot_background_search(payload: SearchPayload):

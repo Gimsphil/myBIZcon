@@ -18,6 +18,16 @@
 - Python/PC/Android 산출물과 비밀 파일이 Git에 들어가지 않도록 `.gitignore`를 추가했다.
 - `backend/tests/test_pc_client_contract.py`를 추가해 PC client와 backend 계약을 고정했다.
 
+## HiNoter 기능 반영
+
+- Bing 검색 결과와 Apple iTunes Search API를 통해 HiNoter 공개 기능을 확인했다.
+- 확인 기능: 원탭 녹음/전사, 발화자 식별, AI 요약, AI 마인드맵, Ask AI, 키워드 검색/오디오 점프, 팀 공유, 암호화/소유자 제어, 캘린더 회의 자동 참여/동기화, 오디오·YouTube 링크 업로드 전사.
+- 신규 API `POST /api/v1/notes/capture`를 추가했다.
+- 신규 서비스 `backend/app/services/hinoter_notes.py`를 추가했다.
+- 신규 계약 테스트 `backend/tests/test_hinoter_note_contract.py`를 추가했다.
+- Live Calendar/YouTube/AI 호출은 아직 연결하지 않고 오프라인 안전 계약 계층으로 구현했다. 실제 외부 연동은 추후 명시 승인 후 연결한다.
+- `docs/HINOTER_FEATURE_INTEGRATION.md`에 출처와 반영 범위를 기록했다.
+
 ## 다음 작업
 
 1. 전체 테스트 실행 및 실패 수정
