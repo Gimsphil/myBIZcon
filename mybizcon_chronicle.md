@@ -137,6 +137,13 @@ myBIZcon/
     *   `TranslationOverlayService.kt`: direct construction of `MyBIZconAccessibilityService()` is not a valid way to invoke the active Android accessibility service instance.
     *   Step 12 CLI bypass documentation is operationally sensitive and should be treated as a controlled local-admin procedure, not the default reviewer workflow.
 
+### 🔒 Step 14: Multi-Agent Chat Dialogue Archive Generation & Push Gate Control (Step 14)
+*   **Action**: Formally enforced the push gate restriction limiting GitHub commit and push rights solely to the AI Reviewer (Antigravity). Generated a clean, persistent dialogue history of the entire session.
+*   **Feats Added**:
+    *   **GitHub Push Gate Control**: Disallowed `agy` and `codex` CLIs from performing commits and pushes, establishing Antigravity as the single-point hub for remote synchronization to prevent divergence.
+    *   **PowerShell High-Fidelity Transcript Parser**: Developed `parse_transcript.ps1` using direct .NET file byte streams and `[System.Text.Encoding]::UTF8.GetString` to read and parse `transcript.jsonl` into clean UTF-8 with BOM format, resolving emojis and Korean CP949 rendering bugs in Windows.
+    *   **Persistent Dialogue Archive**: Created `agent_dialogue_archive.md` in the project root containing all chronological screens and user/model prompts.
+
 ---
 
 ## 💻 5. PC Replication & Setup Instructions (Run on Any PC)
