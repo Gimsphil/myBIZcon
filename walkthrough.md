@@ -1,6 +1,6 @@
-# 🚶 Walkthrough: myBIZcon Phases 1, 2, 2.5 & 3 Accomplished
+# 🚶 Walkthrough: myBIZcon Phases 1, 2, 2.5, 3 & 3.5 Accomplished
 
-We have successfully completed all core development roadmap features up to **Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline** of the **myBIZcon (Universal AI Business Assistant)**. Below is an engineering walkthrough of all actions, code files, and synchronization results.
+We have successfully completed all core development roadmap features up to **Phase 3.5: Voice Optimization, VAD Noise Suppression & Gemini Emotion Analysis** of the **myBIZcon (Universal AI Business Assistant)**. Below is an engineering walkthrough of all actions, code files, and synchronization results.
 
 ---
 
@@ -21,46 +21,39 @@ We have successfully completed all core development roadmap features up to **Pha
 ---
 
 ## 🛠️ Phase 3 Summary of Changes (Completed)
+*   **Multi-threaded Audio Recorder**: Implemented background recording from local mic and WASAPI system loopback call recording.
+*   **Gemini Multimodal Speaker Diarization**: Leveraged Gemini 1.5 Flash's native audio multimodal context to diarize speakers (Speaker A, B, User) and extract Workspace items.
+*   **STT & TTS Pipelines**: Connected Whisper STT and ElevenLabs/Google TTS.
+*   **Search-Assisted Web Copilot**: Coded background search crawler providing business template recommendations.
 
-### 🎙️ 1. Multi-threaded Audio Recorder
+---
+
+## 🛠️ Phase 3.5 Summary of Changes (Completed)
+
+### 🎙️ 1. Dynamic DSP Audio Preprocessing
 *   **Component**: [pc_client/audio_recorder.py](file:///d:/Python%20Programs/myBIZcon/pc_client/audio_recorder.py)
 *   **Features**:
-    *   Integrates PyAudio capture from physical microphones and WASAPI system loopback audio.
-    *   **Simulation Bounded Fallback**: Zero-dependency mockup sound wave (16kHz WAV format, PCM 16-bit) generator in case native PyAudio fails to initialize or compile on the local host.
+    *   **First-Order Digital High-Pass Filter**: Custom recursive difference equation ($y[n] = \alpha \cdot (y[n-1] + x[n] - x[n-1])$ with $\alpha \approx 0.975$) filtering low-frequency rumble (air conditioners, fan hums, background hums) below 80Hz.
+    *   **Dynamic RMS Noise Gate**: Evaluates Root Mean Square (RMS) frame energy. Silences frames falling below the quiet threshold, isolating human voice signals from background noise.
+    *   **Soft Speech Booster**: Amplifies subtle/quiet voice inputs by 25% to maximize Whisper STT precision.
 
-### 🧠 2. Gemini Multimodal Speaker Diarization Engine
+### 🧠 2. Gemini Acoustic Voice Profiling & Emotion Analysis
 *   **Component**: [backend/app/services/diarization_engine.py](file:///d:/Python%20Programs/myBIZcon/backend/app/services/diarization_engine.py)
 *   **Features**:
-    *   Directly uploads recorded WAV audio to the Gemini 1.5 Flash multimodal context.
-    *   Instructs Gemini to separate speakers (Diarization: Speaker A, Speaker B, User), translate foreign conversations, and extract decisions and actions.
-    *   **Ecosystem Automation**: Automatically triggers Google Drive Markdown backups, Google Calendar event scheduling, and Google Tasks registration for diarized meeting events.
+    *   Instructs Gemini 1.5 Flash to analyze acoustic parameters of speaker voices (tempo, pitch range, rhythm, hesitations).
+    *   Synthesizes live emotional trends (Anxious, Excited, Confident, Pleased, Calm) based on dialogue context and voice characteristics.
+    *   Injects emotion tags directly into the diarized transcript (e.g. `[Speaker A - 신중함 🤔]: ...`).
+    *   Returns structured `speaker_analysis` JSON mappings.
 
-### 🔊 3. Speech & Voice Pipeline
-*   **Component**: [backend/app/services/voice_service.py](file:///d:/Python%20Programs/myBIZcon/backend/app/services/voice_service.py)
-*   **Features**:
-    *   **OpenAI Whisper STT**: Standard multipart post to transcribe voice signals.
-    *   **ElevenLabs TTS**: Premium audio bytes synthesis for response cards.
-    *   Full graceful mock support.
-
-### 🔍 4. Search-Assisted Web Copilot
-*   **Component**: [backend/app/services/copilot_search.py](file:///d:/Python%20Programs/myBIZcon/backend/app/services/copilot_search.py)
-*   **Features**:
-    *   Background Google Search query generation based on conversational context.
-    *   Retrieves real-time Wiki summaries and business contract template guidelines.
-
-### 🖥️ 5. PC Client Integration
+### 🖥️ 3. Integrated PC Client UI Updates
 *   **Component**: [pc_client/pc_desktop_client.py](file:///d:/Python%20Programs/myBIZcon/pc_client/pc_desktop_client.py)
 *   **Features**:
-    *   Integrates multi-threaded background recording.
-    *   Adds an interactive **Search-Assisted Web Copilot** live facts card in the GUI.
-    *   Triggers automatic background fact searches during message translation checks.
+    *   Displays real-time diarized speaker voice profile characteristics and live sentiment tags inside the Web Copilot card.
 
 ---
 
 ## 🔬 Validation & Verification Results
 
-All new Phase 3 endpoints are fully implemented and verified:
-*   `POST /api/v1/voice/meeting` (Diarization & Summary)
-*   `POST /api/v1/voice/stt` (Whisper API)
-*   `POST /api/v1/voice/tts` (Text-to-Speech)
-*   `POST /api/v1/copilot/search` (Web Copilot facts search)
+All endpoints compile, run, and sync successfully:
+*   DSP filters operate efficiently on WAV chunks.
+*   Voice profiles and emotion analytics map accurately to the GUI when stopping meeting audio captures.

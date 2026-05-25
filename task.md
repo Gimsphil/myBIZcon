@@ -30,8 +30,8 @@
 - [x] Update PC Desktop Client interface and API integration (`pc_client/pc_desktop_client.py`)
 - [x] Synchronize tasks and write walkthrough report
 
-## Phase 3.5: Voice Optimization, VAD Noise Suppression & Gemini Emotion Analysis (In Progress)
-- [/] Implement first-order high-pass difference filter & dynamic RMS VAD noise gate in `audio_recorder.py`
-- [ ] Upgrade Gemini multimodal prompts in `diarization_engine.py` for acoustic diarization characteristics & emotion extraction
-- [ ] Enhance pc client GUI to show diarized emotion metadata
-- [ ] Write walkthrough report and push updates to Git
+## Phase 3.5: Voice Optimization, VAD Noise Suppression & Gemini Emotion Analysis (Completed)
+- [x] Implement first-order high-pass difference filter & dynamic RMS VAD noise gate in `audio_recorder.py`
+- [x] Upgrade Gemini multimodal prompts in `diarization_engine.py` for acoustic diarization characteristics & emotion extraction
+- [x] Enhance pc client GUI to show diarized emotion metadata
+- [x] Write walkthrough report and push updates to Git
