@@ -44,6 +44,7 @@ myBIZcon/
 ├── mybizcon_tracker.json    ← Structured execution JSON logs (run count, commit hashes)
 ├── mybizcon_chronicle.md    ← This document (Full dialogs, codebases, replication steps)
 ├── pc_client/
+│   ├── audio_recorder.py     ← Multi-threaded mic & loopback recorder with simulated fallback [NEW]
 │   └── pc_desktop_client.py ← Tkinter Windows Desktop Dashboard & subtitle overlays
 ├── backend/
 │   ├── requirements.txt     ← FastAPI python dependencies
@@ -53,7 +54,10 @@ myBIZcon/
 │       ├── main.py          ← FastAPI Server routing all Chat/Calendar/Tasks/Backup APIs
 │       └── services/
 │           ├── google_workspace.py   ← Syncs Drive Markdown backup, Tasks, Calendar
-│           └── relationship_engine.py ← REST Gemini connector with offline fallback
+│           ├── relationship_engine.py ← REST Gemini connector with offline fallback
+│           ├── voice_service.py      ← STT (Whisper API) & TTS (ElevenLabs API) connector [NEW]
+│           ├── diarization_engine.py  ← Gemini multimodal diarizer and automator [NEW]
+│           └── copilot_search.py     ← Background Search-Assisted Web Copilot facts engine [NEW]
 ├── templates/
 │   └── relationship_prompts.py       ← Boss, Client, Coworker, Family templates
 └── android/                 ← Native Kotlin Gradle Project layout
@@ -91,20 +95,20 @@ myBIZcon/
         *   `google_workspace.py`: Integrates automated Google Calendar scheduling, Google Tasks, and one-click Google Drive Markdown transcript backups.
         *   `relationship_engine.py`: Connects to Gemini REST, translating messages and recommending replies.
 
-### 🖥️ Phase 2.5: PC Client & APK Build Setup (Step 7 - 9)
+### 🖥️ Phase 2.5: PC Client & APK Build Setup (Step 7 - 8)
 *   **Action**: Built desktop version and compiled APK packaging tools based on user's new pivot requests.
 *   **Feats Added**:
     *   `pc_desktop_client.py`: Dark-themed slate Tkinter GUI. Implements PC audio capture toggle, live dashboard, meeting minutes sync pipelines, and a **draggable, transparent Windows Subtitle Overlay** that floats over active desktop apps.
     *   `android/build_apk.bat`: Double-click batch script for compiling Android Kotlin app to APK using Gradle or local fallback. Supported by full `build.gradle` structures.
-    *   `mybizcon_chronicle.md`: Created and synchronized this development chronicle to ensure high-fidelity replication context.
 
-### 🎙️ Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline [In Progress] (Step 10)
-*   **Action**: Designed and formalized Phase 3 architectural blueprints in the implementation plan.
-*   **Features Proposed**:
-    *   **Threaded Hybrid Audio Recording**: PC-side audio capture using `sounddevice` and `numpy` with WASAPI loopback, complemented by a zero-dependency dynamic synthetic recording fallback generator.
-    *   **Gemini Multimodal Diarization**: High-performance joint transcribing, translating, and speaker separation directly utilizing Google Gemini 1.5 Flash's native WAV audio processing capabilities.
-    *   **Dual-Tier TTS Engine**: Standard offline/free Google TTS (`gTTS`) combined with a premium ElevenLabs API option.
-    *   **Search-Assisted Web Copilot**: Background asynchronous web search entity lookup displaying contextual Fact Bubbles inside the transparent PC overlay.
+### 🎙️ Phase 3: Real-Time Audio Capture, Meeting Mode & Voice Pipeline (Step 10)
+*   **Action**: Coded complete audio capture recorder, Whisper & ElevenLabs voice pipeline, Gemini native multimodal speaker diarization (User, Speaker A, Speaker B), Search-Assisted Web Copilot background facts engine, and integrated everything into the desktop GUI and FastAPI server.
+*   **Feats Added**:
+    *   `audio_recorder.py`: Multi-threaded recorder using PyAudio for microphone and WASAPI loopback call recording. Features a fully zero-dependency simulation fallback producing robust WAV buffers in dry environments.
+    *   `voice_service.py`: Coded STT (Whisper API) and TTS (ElevenLabs API) connectors with complete offline test mocks.
+    *   `diarization_engine.py`: Sends base64-encoded WAV recording directly to Gemini 1.5 Flash's multimodal audio context. Gemini parses, diarizes speaker dialogue, and maps structured action items to Calendar, Tasks, and Drive.
+    *   `copilot_search.py`: Background DuckDuckGo/Google search crawler providing dynamic business facts and contract templates to the GUI overlay.
+    *   `pc_desktop_client.py` and `main.py` Updates: Registered and integrated all new Phase 3 endpoints. Added a beautiful Search-Assisted Web Copilot facts box in the PC GUI.
 
 ---
 

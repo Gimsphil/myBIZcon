@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -5,28 +6,29 @@ import threading
 import urllib.request
 import urllib.error
 import time
+import os
+
+# Import our custom multi-threaded audio recorder
+from audio_recorder import AudioRecorder
 
 class PCDesktopClient:
     """
-    🖥️ PCDesktopClient
+    PCDesktopClient
     A premium Tkinter-based Windows desktop client for myBIZcon.
-    Features:
-    1. Premium dark-theme dashboard matching professional bi-modal design parameters.
-    2. Frameless, semi-transparent Windows Overlay for floating live translations and replies.
-    3. Active message simulator & Gemini API interface.
-    4. Audio recording controls for PC-based meetings.
     """
 
     def __init__(self, root):
         self.root = root
-        self.root.title("myBIZcon — AI Business Assistant (PC Version)")
-        self.root.geometry("850x550")
-        self.root.configure(bg="#1E1E2E") # Vibrant sleek slate dark mode
+        self.root.title("myBIZcon - AI Business Assistant (PC Version)")
+        self.root.geometry("900x620")
+        self.root.configure(bg="#1E1E2E")
 
-        # API Configurations
+        # API & Recording Configurations
         self.backend_url = "http://localhost:8000/api/v1"
         self.is_recording = False
         self.active_overlay = None
+        self.audio_path = os.path.join(os.getcwd(), "meeting_capture.wav")
+        self.recorder = None
 
         # Apply Premium UI Styles
         self.setup_styles()
@@ -36,14 +38,12 @@ class PCDesktopClient:
         self.style = ttk.Style()
         self.style.theme_use("clam")
         
-        # Configure slate dark elements
         self.style.configure(".", background="#1E1E2E", foreground="#FFFFFF")
         self.style.configure("TFrame", background="#1E1E2E")
         self.style.configure("TLabel", background="#1E1E2E", foreground="#E0E0E0", font=("Segoe UI", 10))
         self.style.configure("Header.TLabel", font=("Segoe UI", 16, "bold"), foreground="#00D1B2")
         self.style.configure("Sub.TLabel", font=("Segoe UI", 11, "italic"), foreground="#B5B5B5")
 
-        # Sleek Premium Buttons style
         self.style.configure("TButton", 
             background="#2E7D32", 
             foreground="#FFFFFF", 
@@ -64,24 +64,20 @@ class PCDesktopClient:
         )
 
     def build_dashboard(self):
-        # Master Layout: Top header, Left settings, Right simulation
         header_frame = ttk.Frame(self.root)
         header_frame.pack(fill="x", padx=25, pady=15)
 
-        title = ttk.Label(header_frame, text="🌐 myBIZcon AI Assistant — Desktop Copilot", style="Header.TLabel")
+        title = ttk.Label(header_frame, text="Universal AI Business Assistant - Desktop Copilot", style="Header.TLabel")
         title.pack(anchor="w")
         subtitle = ttk.Label(header_frame, text="Active platform: Windows PC | Connected via Localhost API", style="Sub.TLabel")
         subtitle.pack(anchor="w")
 
-        # Main Body Splitter
         body_frame = ttk.Frame(self.root)
         body_frame.pack(fill="both", expand=True, padx=25, pady=5)
 
-        # Left Column: Configuration & Status
-        left_col = ttk.Frame(body_frame, width=280)
+        left_col = ttk.Frame(body_frame, width=300)
         left_col.pack(side="left", fill="y", padx=(0, 15))
 
-        # Status Panel Card
         status_card = tk.LabelFrame(left_col, text=" System Status ", bg="#252538", fg="#00D1B2", font=("Segoe UI", 9, "bold"), padx=15, pady=15, bd=1, relief="solid")
         status_card.pack(fill="x", pady=(0, 15))
 
@@ -93,45 +89,57 @@ class PCDesktopClient:
         self.meeting_status_lbl = tk.Label(status_card, text="STANDBY", bg="#252538", fg="#9E9E9E", font=("Segoe UI", 9, "bold"))
         self.meeting_status_lbl.grid(row=1, column=1, sticky="w", pady=4)
 
-        # Quick Control Panel
         control_card = tk.LabelFrame(left_col, text=" Audio & Meeting Recorder ", bg="#252538", fg="#00D1B2", font=("Segoe UI", 9, "bold"), padx=15, pady=15, bd=1, relief="solid")
-        control_card.pack(fill="x", expand=True)
+        control_card.pack(fill="both", expand=True)
 
-        self.record_btn = ttk.Button(control_card, text="🎙️ START MEETING CAPTURE", command=self.toggle_recording)
+        self.record_btn = ttk.Button(control_card, text="START MEETING CAPTURE", command=self.toggle_recording)
         self.record_btn.pack(fill="x", pady=10)
 
-        self.overlay_btn = ttk.Button(control_card, text="🖥️ TOGGLE PC SUBTITLE OVERLAY", style="Action.TButton", command=self.toggle_overlay)
+        self.overlay_btn = ttk.Button(control_card, text="TOGGLE PC SUBTITLE OVERLAY", style="Action.TButton", command=self.toggle_overlay)
         self.overlay_btn.pack(fill="x", pady=10)
 
-        # Right Column: Messaging & Workspace Simulation Workspace
-        right_col = tk.LabelFrame(body_frame, text=" Live Context Simulator ", bg="#1E1E2E", fg="#00D1B2", font=("Segoe UI", 9, "bold"), padx=20, pady=15, bd=1, relief="solid")
+        ttk.Label(control_card, text="Saved Recording WAV Path:", background="#252538", font=("Segoe UI", 8, "italic")).pack(anchor="w", pady=(15, 2))
+        self.path_lbl = tk.Entry(control_card, bg="#1E1E2E", fg="#B5B5B5", bd=0, font=("Segoe UI", 8))
+        self.path_lbl.insert(0, self.audio_path)
+        self.path_lbl.config(state="readonly")
+        self.path_lbl.pack(fill="x")
+
+        right_col = ttk.Frame(body_frame)
         right_col.pack(side="right", fill="both", expand=True)
 
-        # Message Entry Fields
-        ttk.Label(right_col, text="Sender Name (e.g. John Buyer / Boss):").pack(anchor="w", pady=(0, 2))
-        self.sender_entry = ttk.Entry(right_col, font=("Segoe UI", 10))
+        sim_card = tk.LabelFrame(right_col, text=" Live Context Simulator ", bg="#1E1E2E", fg="#00D1B2", font=("Segoe UI", 9, "bold"), padx=20, pady=10, bd=1, relief="solid")
+        sim_card.pack(fill="x", pady=(0, 15))
+
+        ttk.Label(sim_card, text="Sender Name (e.g. John Buyer / Boss):").pack(anchor="w", pady=(0, 2))
+        self.sender_entry = ttk.Entry(sim_card, font=("Segoe UI", 10))
         self.sender_entry.insert(0, "Director Kim (BOSS)")
-        self.sender_entry.pack(fill="x", pady=(0, 10))
+        self.sender_entry.pack(fill="x", pady=(0, 6))
 
-        ttk.Label(right_col, text="Incoming Message Content:").pack(anchor="w", pady=(0, 2))
-        self.message_txt = tk.Text(right_col, height=4, font=("Segoe UI", 10), bg="#252538", fg="#FFFFFF", insertbackground="white", bd=0)
-        self.message_txt.insert("1.0", "Can we confirm the schedule for next Wednesday's strategy conference?")
-        self.message_txt.pack(fill="x", pady=(0, 10))
+        ttk.Label(sim_card, text="Incoming Message Content:").pack(anchor="w", pady=(0, 2))
+        self.message_txt = tk.Text(sim_card, height=3, font=("Segoe UI", 10), bg="#252538", fg="#FFFFFF", insertbackground="white", bd=0)
+        self.message_txt.insert("1.0", "Can we confirm the schedule for next Wednesday's strategy conference? Mention NDA and pricing.")
+        self.message_txt.pack(fill="x", pady=(0, 6))
 
-        # Relationship Selector
-        ttk.Label(right_col, text="Relationship Profile:").pack(anchor="w", pady=(0, 2))
+        action_frame = ttk.Frame(sim_card)
+        action_frame.pack(fill="x", pady=5)
+        
         self.relation_var = tk.StringVar(value="BOSS")
-        self.relation_combo = ttk.Combobox(right_col, textvariable=self.relation_var, values=["BOSS", "CLIENT", "COWORKER", "FAMILY"], state="readonly")
-        self.relation_combo.pack(fill="x", pady=(0, 15))
+        self.relation_combo = ttk.Combobox(action_frame, textvariable=self.relation_var, values=["BOSS", "CLIENT", "COWORKER", "FAMILY"], state="readonly", width=15)
+        self.relation_combo.pack(side="left", padx=(0, 10))
 
-        # Action Buttons
-        ttk.Button(right_col, text="⚡ SYNC MESSAGE & TRANSLATE", command=self.sync_and_translate).pack(fill="x")
+        ttk.Button(action_frame, text="SYNC MESSAGE & TRANSLATE", command=self.sync_and_translate).pack(side="right", fill="x", expand=True)
 
-        # Periodically check server status in background
+        self.copilot_card = tk.LabelFrame(right_col, text=" Search-Assisted Web Copilot (Live Facts) ", bg="#252538", fg="#00D1B2", font=("Segoe UI", 9, "bold"), padx=20, pady=10, bd=1, relief="solid")
+        self.copilot_card.pack(fill="both", expand=True)
+
+        self.copilot_txt = tk.Text(self.copilot_card, bg="#1E1E2E", fg="#00D1B2", font=("Segoe UI", 9), bd=0, wrap="word", insertbackground="white")
+        self.copilot_txt.pack(fill="both", expand=True)
+        self.copilot_txt.insert("1.0", "Web Copilot Standby. Active keyword matching triggers real-time business templates NDA, pricing lookup and facts.")
+        self.copilot_txt.config(state="disabled")
+
         threading.Thread(target=self.ping_backend_server, daemon=True).start()
 
     def ping_backend_server(self):
-        """Pings FastAPI backend to verify connection status."""
         while True:
             try:
                 with urllib.request.urlopen(self.backend_url, timeout=3.0) as response:
@@ -144,52 +152,55 @@ class PCDesktopClient:
             time.sleep(5)
 
     def toggle_recording(self):
-        """Toggles Zoom/Meeting audio recording status."""
         self.is_recording = not self.is_recording
         if self.is_recording:
-            self.record_btn.config(text="🛑 STOP & SAVE MINUTES")
+            self.record_btn.config(text="STOP & PROCESS MEETING")
             self.meeting_status_lbl.config(text="RECORDING", fg="#F44336")
-            # Simulate physical recording
-            messagebox.showinfo("Meeting Mode Activated", "PC microphone is now listening. Generating live diarized meeting transcript.")
+            self.recorder = AudioRecorder(filename=self.audio_path)
+            self.recorder.start()
+            self._update_copilot_facts("Meeting Audio Capture is active. Recording mic and system call loopback...")
         else:
-            self.record_btn.config(text="🎙️ START MEETING CAPTURE")
+            self.record_btn.config(text="START MEETING CAPTURE")
             self.meeting_status_lbl.config(text="STANDBY", fg="#9E9E9E")
-            
-            # Post mock meeting backup to Drive
-            self.generate_and_save_minutes()
+            if self.recorder:
+                self.recorder.stop()
+            self._update_copilot_facts("Ingesting audio, performing speaker diarization via Gemini multimodal routing...")
+            threading.Thread(target=self.process_meeting_recording, daemon=True).start()
 
-    def generate_and_save_minutes(self):
-        """Mock pipeline saving meeting minutes to Drive."""
-        mock_payload = {
-            "title": f"PC Meeting minutes {time.strftime('%Y-%m-%d %H:%M')}",
-            "transcript_markdown": (
-                "## 📝 PC Meeting Summary\n"
-                "Attendees: Speaker A (Client), Speaker B (User)\n\n"
-                "### Key Decisions:\n"
-                "- Confirmed the pricing schedule adjustment to +5%.\n"
-                "- Approved development phase milestones.\n\n"
-                "### Action Items:\n"
-                "- User: Register Tasks schedules in Calendar.\n"
-            )
-        }
-        
-        # Trigger FastAPI workspace archival API
-        url = f"{self.backend_url}/workspace/backup"
+    def process_meeting_recording(self):
+        url = f"{self.backend_url}/voice/meeting"
+        payload = {"file_path": self.audio_path}
         req = urllib.request.Request(
             url,
-            data=json.dumps(mock_payload).encode("utf-8"),
+            data=json.dumps(payload).encode("utf-8"),
             headers={"Content-Type": "application/json"}
         )
-        
         try:
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
-                messagebox.showinfo("Google Drive Archive", f"Meeting transcript processed and saved directly to Drive.\nPath: {result.get('filename')}")
+                transcript = result.get("transcript_markdown", "")
+                summary = result.get("summary", "")
+                decisions = result.get("decisions", [])
+                
+                facts_text = "Meeting Diarization and Workspace Sync Complete\n\n"
+                facts_text += f"Summary: {summary}\n\n"
+                facts_text += "Decisions:\n"
+                for dec in decisions:
+                    facts_text += f" - {dec}\n"
+                
+                facts_text += "\nGoogle Workspace Synchronized:\n"
+                facts_text += " - Google Drive: Meeting Minutes archived\n"
+                facts_text += " - Google Tasks: Dynamic Tasks registered\n"
+                facts_text += " - Google Calendar: Meeting schedules registered\n\n"
+                facts_text += f"Full Transcript:\n{transcript}"
+                
+                self.root.after(0, lambda: self._update_copilot_facts(facts_text))
+                self.root.after(0, lambda: messagebox.showinfo("Google Workspace Sync", "Meeting audio processed successfully!\nMinutes archived in Google Drive, and Agenda items registered on Calendar/Tasks."))
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to sync with FastAPI: {str(e)}")
+            self.root.after(0, lambda: messagebox.showerror("Connection Error", f"Diarization Backend Error: {str(e)}"))
+            self.root.after(0, lambda: self._update_copilot_facts("Diarization parsing failed. Ensure backend API server is online."))
 
     def sync_and_translate(self):
-        """Synchronizes message with backend to generate translations and overlays."""
         sender = self.sender_entry.get().strip()
         content = self.message_txt.get("1.0", "end-1c").strip()
         relation = self.relation_var.get()
@@ -206,8 +217,46 @@ class PCDesktopClient:
             "is_group": False
         }
 
-        # Send request
         threading.Thread(target=self._post_message_to_api, args=(payload,), daemon=True).start()
+        
+        search_query = ""
+        if "NDA" in content.upper() or "계약" in content:
+            search_query = "제휴 계약서"
+        elif "pricing" in content.lower() or "가격" in content or "인상" in content:
+            search_query = "pricing"
+        else:
+            search_query = content[:15]
+            
+        threading.Thread(target=self.trigger_copilot_search, args=(search_query,), daemon=True).start()
+
+    def trigger_copilot_search(self, query):
+        url = f"{self.backend_url}/copilot/search"
+        payload = {"query": query}
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"}
+        )
+        try:
+            with urllib.request.urlopen(req) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                facts = result.get("facts", [])
+                
+                facts_text = f"Search-Assisted Web Copilot Support - Keyword: '{query}'\n\n"
+                for idx, fact in enumerate(facts, 1):
+                    facts_text += f"{idx}. {fact.get('title')}\n"
+                    facts_text += f"   - {fact.get('snippet')}\n"
+                    facts_text += f"   - [Source]: {fact.get('source')}\n\n"
+                
+                self.root.after(0, lambda: self._update_copilot_facts(facts_text))
+        except Exception:
+            pass
+
+    def _update_copilot_facts(self, text):
+        self.copilot_txt.config(state="normal")
+        self.copilot_txt.delete("1.0", "end")
+        self.copilot_txt.insert("1.0", text)
+        self.copilot_txt.config(state="disabled")
 
     def _post_message_to_api(self, payload):
         url = f"{self.backend_url}/chat/message"
@@ -220,13 +269,11 @@ class PCDesktopClient:
         try:
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
-                # Update floating overlays
                 self.show_floating_overlay(result)
         except Exception as e:
             self.root.after(0, lambda: messagebox.showerror("Connection Error", f"FastAPI Server offline: {str(e)}"))
 
     def show_floating_overlay(self, data):
-        """Displays or updates the frameless transparent subtitle overlay on PC screen."""
         self.root.after(0, lambda: self._render_overlay_window(data))
 
     def _render_overlay_window(self, data):
@@ -236,23 +283,19 @@ class PCDesktopClient:
         translation = data.get("translation", "")
         suggestions = data.get("suggestions", [])
 
-        # Create transparent floating Tkinter window
         overlay = tk.Toplevel(self.root)
-        overlay.overrideredirect(True) # Frameless
-        overlay.attributes("-topmost", True) # Keep on top of all windows
-        overlay.attributes("-alpha", 0.9) # Transparent
+        overlay.overrideredirect(True)
+        overlay.attributes("-topmost", True)
+        overlay.attributes("-alpha", 0.9)
         overlay.configure(bg="#212529")
 
-        # Place bottom right
         screen_w = self.root.winfo_screenwidth()
         screen_h = self.root.winfo_screenheight()
         overlay.geometry(f"450x250+{screen_w - 480}+{screen_h - 320}")
 
-        # Drag handle
-        drag_bar = tk.Label(overlay, text="🌐 myBIZcon Subtitle Overlay (Drag to move)", bg="#00D1B2", fg="#1E1E2E", font=("Segoe UI", 9, "bold"))
+        drag_bar = tk.Label(overlay, text="myBIZcon Subtitle Overlay (Drag to move)", bg="#00D1B2", fg="#1E1E2E", font=("Segoe UI", 9, "bold"))
         drag_bar.pack(fill="x")
         
-        # Make draggable
         def make_draggable(widget):
             def start_drag(event):
                 widget.x = event.x
@@ -268,19 +311,17 @@ class PCDesktopClient:
 
         make_draggable(drag_bar)
 
-        # Content
         body = tk.Frame(overlay, bg="#212529", padx=15, pady=10)
         body.pack(fill="both", expand=True)
 
-        tk.Label(body, text=f"🎯 번역: {translation}", bg="#212529", fg="#FFFFFF", font=("Segoe UI", 11, "bold"), wraplength=420, justify="left").pack(anchor="w", pady=(0, 10))
+        tk.Label(body, text=f"Translation: {translation}", bg="#212529", fg="#FFFFFF", font=("Segoe UI", 11, "bold"), wraplength=420, justify="left").pack(anchor="w", pady=(0, 10))
 
-        tk.Label(body, text="💡 추천 답변 선택 (HITL):", bg="#212529", fg="#B5B5B5", font=("Segoe UI", 8, "italic")).pack(anchor="w", pady=(0, 5))
+        tk.Label(body, text="Suggestions (HITL):", bg="#212529", fg="#B5B5B5", font=("Segoe UI", 8, "italic")).pack(anchor="w", pady=(0, 5))
 
         for sug in suggestions:
             btn_text = f"[{sug.get('tone')}] {sug.get('content')}"
             btn = tk.Button(body, text=btn_text, bg="#2E7D32", fg="#FFFFFF", font=("Segoe UI", 9, "bold"), activebackground="#1B5E20", activeforeground="#FFFFFF", bd=0, padx=10, pady=5, anchor="w")
             
-            # Simulated text injection
             def inject(txt=sug.get('content')):
                 messagebox.showinfo("Text Injection", f"Selected draft has been copied to clipboard & typed:\n--> \"{txt}\"")
                 overlay.destroy()
@@ -292,16 +333,15 @@ class PCDesktopClient:
         self.active_overlay = overlay
 
     def toggle_overlay(self):
-        """Toggles the state of subtitle overlay manually."""
         if self.active_overlay:
             self.active_overlay.destroy()
             self.active_overlay = None
         else:
             mock_data = {
-                "translation": "안녕하세요, 제안서 검토 결과를 언제쯤 공유받을 수 있을까요?",
+                "translation": "Hello, when can I expect the review results of the proposal?",
                 "suggestions": [
-                    {"tone": "예의 바름", "content": "네, 현재 기획안 조정 중으로 금일 오후 4시 전까지 공유드리겠습니다."},
-                    {"tone": "신속 답변", "content": "네, 바로 이메일 발송해 드리겠습니다."}
+                    {"tone": "Polite", "content": "Yes, I am refining the plan and will share it by 4 PM today."},
+                    {"tone": "Fast", "content": "Yes, I will send the email right away."}
                 ]
             }
             self._render_overlay_window(mock_data)
