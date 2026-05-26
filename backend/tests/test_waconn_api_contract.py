@@ -112,6 +112,6 @@ def test_waconn_contract_rejects_invalid_payloads():
             json={"transcript": [], "question": ""},
         )
 
-    assert reply_response.status_code == 422
-    assert summary_response.status_code == 422
-    assert ask_response.status_code == 422
+    assert reply_response.status_code == 400
+    assert summary_response.status_code == 400
+    assert ask_response.status_code == 400

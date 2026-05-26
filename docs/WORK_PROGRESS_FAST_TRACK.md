@@ -46,6 +46,8 @@
 - 신규 호환 endpoint를 추가했다: `POST /api/generate-reply`, `POST /api/meeting-summary`, `POST /api/ask-notes`.
 - 실제 Gemini/Google/외부 API 호출 없이 기존 `relationship_engine` mock 및 HiNoter 노트 로직을 재사용하도록 구성했다.
 - 신규 계약 테스트 `backend/tests/test_waconn_api_contract.py`를 추가했고, `MYBIZCON_DISABLE_EXTERNAL_SERVICES=1` 상태에서 외부 `httpx` 호출이 발생하지 않음을 검증했다.
+- 이후 WhatsApp으로 수신된 `WAconn-debug.apk`를 확인해 APK 내부 `assets/capacitor.config.json`의 `appId=com.gimsphil.waconn` 및 내장 `server.cjs` API 계약이 GitHub WAconn `server.ts`와 동일함을 검증했다.
+- APK 기준에 맞춰 WAconn 호환 endpoint의 잘못된 payload 응답을 FastAPI 기본 `422`가 아닌 WAconn과 같은 `400`으로 정렬했다.
 - 검증 결과: WAconn 계약 테스트 `4 passed`, backend 전체 테스트 `72 passed`.
 
 ## 다음 작업

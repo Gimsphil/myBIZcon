@@ -18,7 +18,7 @@ import time
 import logging
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, status, Depends, Header
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
@@ -127,19 +127,19 @@ class SearchPayload(BaseModel):
 
 class WAconnTranscriptLine(BaseModel):
     speaker: Optional[str] = "Unknown"
-    text: str = Field(..., min_length=1)
+    text: str = ""
 
 class WAconnGenerateReplyPayload(BaseModel):
-    message: str = Field(..., min_length=1)
-    persona: str = Field(..., min_length=1)
+    message: Optional[str] = None
+    persona: Optional[str] = None
     channel: Optional[str] = "workspace chat"
 
 class WAconnMeetingSummaryPayload(BaseModel):
-    transcript: List[WAconnTranscriptLine] = Field(..., min_length=1)
+    transcript: Optional[object] = None
 
 class WAconnAskNotesPayload(BaseModel):
-    transcript: List[WAconnTranscriptLine] | str
-    question: str = Field(..., min_length=1)
+    transcript: Optional[object] = None
+    question: Optional[str] = None
 
 class NoteCapturePayload(BaseModel):
     title: str
@@ -177,6 +177,44 @@ def _normalise_waconn_channel(channel: str | None) -> str:
 def _transcript_lines_to_text(transcript: List[WAconnTranscriptLine]) -> str:
     return "\n".join(
         f"{line.speaker or 'Unknown'}: {line.text}" for line in transcript
+    )
+
+
+def _coerce_waconn_transcript_lines(transcript: object) -> list[WAconnTranscriptLine]:
+    if not isinstance(transcript, list) or not transcript:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transcript is required and must be an array",
+        )
+
+    lines: list[WAconnTranscriptLine] = []
+    for line in transcript:
+        if isinstance(line, WAconnTranscriptLine):
+            parsed = line
+        elif isinstance(line, dict):
+            parsed = WAconnTranscriptLine(
+                speaker=line.get("speaker") or "Unknown",
+                text=str(line.get("text") or ""),
+            )
+        else:
+            parsed = WAconnTranscriptLine(speaker="Unknown", text=str(line or ""))
+        if not parsed.text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Transcript line text is required",
+            )
+        lines.append(parsed)
+    return lines
+
+
+def _coerce_waconn_transcript_text(transcript: object) -> str:
+    if isinstance(transcript, list):
+        return _transcript_lines_to_text(_coerce_waconn_transcript_lines(transcript))
+    if transcript:
+        return str(transcript)
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail="Transcript and question are required",
     )
 
 
@@ -223,6 +261,12 @@ async def waconn_generate_reply(payload: WAconnGenerateReplyPayload):
     draftOriginal, draftTranslated, mode. In offline mode this reuses the
     relationship engine's deterministic mock path and does not call Gemini.
     """
+    if not payload.message or not payload.persona:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing message or persona parameter",
+        )
+
     relationship = _normalise_waconn_persona(payload.persona)
     platform = _normalise_waconn_channel(payload.channel)
     result = await relationship_engine.generate_replies(
@@ -256,7 +300,8 @@ def waconn_meeting_summary(payload: WAconnMeetingSummaryPayload):
     items from client-provided transcript text. No external AI or Workspace
     service is called by this endpoint.
     """
-    transcript_text = _transcript_lines_to_text(payload.transcript)
+    transcript_lines = _coerce_waconn_transcript_lines(payload.transcript)
+    transcript_text = _transcript_lines_to_text(transcript_lines)
     note = hinoter_note_service.capture_note(
         title="WAconn Meeting",
         source_type="waconn_transcript",
@@ -276,10 +321,12 @@ def waconn_ask_notes(payload: WAconnAskNotesPayload):
     """
     WAconn-compatible transcript Q&A endpoint backed by local note logic.
     """
-    if isinstance(payload.transcript, list):
-        transcript_text = _transcript_lines_to_text(payload.transcript)
-    else:
-        transcript_text = payload.transcript
+    if not payload.transcript or not payload.question:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Transcript and question are required",
+        )
+    transcript_text = _coerce_waconn_transcript_text(payload.transcript)
 
     note = hinoter_note_service.capture_note(
         title="WAconn Notes",
