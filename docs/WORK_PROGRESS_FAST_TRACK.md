@@ -39,8 +39,17 @@
 - Android AccessibilityService가 일반 WhatsApp(`com.whatsapp`)과 WhatsApp Business(`com.whatsapp.w4b`)를 event packageName으로 자동 인식하고, 활성 패키지 prefix로 ViewId를 동적으로 찾도록 보강했다.
 - 비-WhatsApp 이벤트에서는 스크래핑/주입/노트 캡처가 동작하지 않도록 안전 가드를 추가했다.
 
+## 2026-05-26 WAconn 참조 적용
+
+- 사용자가 제공한 `https://github.com/Gimsphil/WAconn`를 `D:/DEV_PROJECTS/_refs/WAconn`에 로컬 참조 클론했다.
+- WAconn `server.ts`가 제공하는 프런트엔드 API 계약을 myBIZcon FastAPI backend에 오프라인 안전 방식으로 반영했다.
+- 신규 호환 endpoint를 추가했다: `POST /api/generate-reply`, `POST /api/meeting-summary`, `POST /api/ask-notes`.
+- 실제 Gemini/Google/외부 API 호출 없이 기존 `relationship_engine` mock 및 HiNoter 노트 로직을 재사용하도록 구성했다.
+- 신규 계약 테스트 `backend/tests/test_waconn_api_contract.py`를 추가했고, `MYBIZCON_DISABLE_EXTERNAL_SERVICES=1` 상태에서 외부 `httpx` 호출이 발생하지 않음을 검증했다.
+- 검증 결과: WAconn 계약 테스트 `4 passed`, backend 전체 테스트 `72 passed`.
+
 ## 다음 작업
 
-1. 현재 미커밋 diff 최종 검수
+1. WAconn 웹 프런트엔드 자체를 myBIZcon에 병합할지, API 호환 계층만 유지할지 결정
 2. Android Gradle 빌드 가능 여부 확인
-3. 검수 후 커밋 및 GitHub push
+3. 실제 Android 기기에서 WhatsApp/WAconn 호환 API 연동 확인

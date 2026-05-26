@@ -18,11 +18,11 @@ import time
 import logging
 from typing import List, Optional
 from fastapi import FastAPI, HTTPException, status, Depends, Header
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 
-from app.config import settings
+from app.config import external_services_disabled, settings
 from app.services.relationship_engine import relationship_engine
 from app.services.google_workspace import google_workspace
 from app.services.diarization_engine import diarization_engine
@@ -125,6 +125,22 @@ class TTSPayload(BaseModel):
 class SearchPayload(BaseModel):
     query: str
 
+class WAconnTranscriptLine(BaseModel):
+    speaker: Optional[str] = "Unknown"
+    text: str = Field(..., min_length=1)
+
+class WAconnGenerateReplyPayload(BaseModel):
+    message: str = Field(..., min_length=1)
+    persona: str = Field(..., min_length=1)
+    channel: Optional[str] = "workspace chat"
+
+class WAconnMeetingSummaryPayload(BaseModel):
+    transcript: List[WAconnTranscriptLine] = Field(..., min_length=1)
+
+class WAconnAskNotesPayload(BaseModel):
+    transcript: List[WAconnTranscriptLine] | str
+    question: str = Field(..., min_length=1)
+
 class NoteCapturePayload(BaseModel):
     title: str
     source_type: str = "recording"
@@ -135,6 +151,57 @@ class NoteCapturePayload(BaseModel):
     auto_join_calendar: Optional[bool] = False
     ask: Optional[str] = None
 
+
+def _normalise_waconn_persona(persona: str) -> str:
+    persona_upper = (persona or "").upper()
+    if "BOSS" in persona_upper:
+        return "BOSS"
+    if "CLIENT" in persona_upper:
+        return "CLIENT"
+    if "FAMILY" in persona_upper:
+        return "FAMILY"
+    return "COWORKER"
+
+
+def _normalise_waconn_channel(channel: str | None) -> str:
+    channel_upper = (channel or "WHATSAPP").upper()
+    if "SLACK" in channel_upper:
+        return "SLACK"
+    if "KAKAO" in channel_upper:
+        return "KAKAOTALK"
+    if "TELEGRAM" in channel_upper:
+        return "TELEGRAM"
+    return "WHATSAPP"
+
+
+def _transcript_lines_to_text(transcript: List[WAconnTranscriptLine]) -> str:
+    return "\n".join(
+        f"{line.speaker or 'Unknown'}: {line.text}" for line in transcript
+    )
+
+
+def _build_waconn_meeting_markdown(transcript_text: str, note: dict) -> str:
+    decisions = note.get("decisions") or ["No explicit decisions were detected."]
+    action_items = note.get("action_items") or []
+    action_lines = [
+        f"- {item.get('title', 'Follow up')}"
+        + (f" (due: {item['due_date']})" if item.get("due_date") else "")
+        for item in action_items
+    ] or ["- No explicit action items were detected."]
+
+    transcript_block = "\n".join(f"- {line}" for line in transcript_text.splitlines())
+    return (
+        "# Executive Summary (핵심 요약)\n"
+        f"{note.get('summary', 'Meeting transcript captured for offline analysis.')}\n\n"
+        "# Decisions Made (결정 사항)\n"
+        + "\n".join(f"- {decision}" for decision in decisions)
+        + "\n\n# Auto-Extracted Action Items (조치 사항)\n"
+        + "\n".join(action_lines)
+        + "\n\n# Transcript\n"
+        + transcript_block
+    )
+
+
 # Endpoints
 
 @app.get("/")
@@ -144,6 +211,87 @@ def read_root():
         "status": "ONLINE",
         "service": "myBIZcon API Gateway",
         "engine": "Google Gemini 1.5 Flash"
+    }
+
+
+@app.post("/api/generate-reply")
+async def waconn_generate_reply(payload: WAconnGenerateReplyPayload):
+    """
+    WAconn-compatible reply drafting endpoint.
+
+    The response shape intentionally matches WAconn frontend expectations:
+    draftOriginal, draftTranslated, mode. In offline mode this reuses the
+    relationship engine's deterministic mock path and does not call Gemini.
+    """
+    relationship = _normalise_waconn_persona(payload.persona)
+    platform = _normalise_waconn_channel(payload.channel)
+    result = await relationship_engine.generate_replies(
+        sender="WAconn",
+        content=payload.message,
+        relationship=relationship,
+        is_group=False,
+        platform=platform,
+    )
+    suggestions = result.get("suggestions") or []
+    draft_original = (
+        suggestions[0].get("content")
+        if suggestions and isinstance(suggestions[0], dict)
+        else f"Received: {payload.message}"
+    )
+    return {
+        "draftOriginal": draft_original,
+        "draftTranslated": result.get("translation", payload.message),
+        "mode": "api"
+        if settings.GEMINI_API_KEY and not external_services_disabled()
+        else "simulation",
+    }
+
+
+@app.post("/api/meeting-summary")
+def waconn_meeting_summary(payload: WAconnMeetingSummaryPayload):
+    """
+    WAconn-compatible meeting minutes endpoint.
+
+    Uses the local HiNoter note logic to extract summary, decisions, and action
+    items from client-provided transcript text. No external AI or Workspace
+    service is called by this endpoint.
+    """
+    transcript_text = _transcript_lines_to_text(payload.transcript)
+    note = hinoter_note_service.capture_note(
+        title="WAconn Meeting",
+        source_type="waconn_transcript",
+        source_uri=None,
+        transcript=transcript_text,
+        speaker_labels=None,
+        ask=None,
+    )
+    return {
+        "markdown": _build_waconn_meeting_markdown(transcript_text, note),
+        "mode": "simulation",
+    }
+
+
+@app.post("/api/ask-notes")
+def waconn_ask_notes(payload: WAconnAskNotesPayload):
+    """
+    WAconn-compatible transcript Q&A endpoint backed by local note logic.
+    """
+    if isinstance(payload.transcript, list):
+        transcript_text = _transcript_lines_to_text(payload.transcript)
+    else:
+        transcript_text = payload.transcript
+
+    note = hinoter_note_service.capture_note(
+        title="WAconn Notes",
+        source_type="waconn_transcript",
+        source_uri=None,
+        transcript=transcript_text,
+        speaker_labels=None,
+        ask=payload.question,
+    )
+    return {
+        "answer": note.get("ask_ai", {}).get("answer") or note.get("summary", ""),
+        "mode": "simulation",
     }
 
 
