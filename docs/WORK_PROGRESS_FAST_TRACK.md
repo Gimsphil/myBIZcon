@@ -36,6 +36,8 @@
 - Codex 리뷰 HIGH 2건을 반영했다: 외부서비스 비활성 플래그 전역 가드, Android 대화방 전환 시 note capture 캐시 초기화.
 - Codex 리뷰 MEDIUM 2건도 반영했다: HiNoter 한국어 액션/결정 추출 보강, PC note capture 상태 분리.
 - 신규 계약 테스트 `backend/tests/test_external_services_disable_contract.py`를 추가했고 Android/HiNoter/PC 계약 테스트를 보강했다.
+- Android AccessibilityService가 일반 WhatsApp(`com.whatsapp`)과 WhatsApp Business(`com.whatsapp.w4b`)를 event packageName으로 자동 인식하고, 활성 패키지 prefix로 ViewId를 동적으로 찾도록 보강했다.
+- 비-WhatsApp 이벤트에서는 스크래핑/주입/노트 캡처가 동작하지 않도록 안전 가드를 추가했다.
 
 ## 다음 작업
 

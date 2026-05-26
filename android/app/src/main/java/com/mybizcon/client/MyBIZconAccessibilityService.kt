@@ -27,6 +27,8 @@ class MyBIZconAccessibilityService : AccessibilityService() {
         private const val TAG = "myBIZcon_AccessService"
         private const val BACKEND_URL = "http://10.0.2.2:8000/api/v1/chat/message" // Localhost via Android Emulator
         private const val NOTES_CAPTURE_URL = "http://10.0.2.2:8000/api/v1/notes/capture"
+        private const val WHATSAPP_PACKAGE = "com.whatsapp"
+        private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"
         private var activeInstance: MyBIZconAccessibilityService? = null
 
         fun injectIntoActiveMessenger(draftText: String): Boolean {
@@ -38,16 +40,16 @@ class MyBIZconAccessibilityService : AccessibilityService() {
             return activeInstance?.captureCurrentConversationAsNote() == true
         }
         
-        // Node Resource IDs for unmodified WhatsApp layouts (crucial for targeted scraping)
-        private const val WHATSAPP_MESSAGE_TEXT_ID = "com.whatsapp:id/message_text"
-        private const val WHATSAPP_CONVERSATION_TITLE_ID = "com.whatsapp:id/conversation_contact_name"
-        private const val WHATSAPP_GROUP_SENDER_NAME_ID = "com.whatsapp:id/sender_name"
-        private const val WHATSAPP_INPUT_TEXT_ID = "com.whatsapp:id/entry"
+        private fun isWhatsAppPackage(packageName: CharSequence?): Boolean {
+            val packageText = packageName?.toString()
+            return packageText == WHATSAPP_PACKAGE || packageText == WHATSAPP_BUSINESS_PACKAGE
+        }
     }
 
     private var lastScrapedText = ""
     private var activeConversationTitle = ""
     private var lastScrapedSender = "Unknown"
+    private var activeWhatsAppPackage = ""
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -56,6 +58,12 @@ class MyBIZconAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
+        val eventPackage = event.packageName
+        if (!isWhatsAppPackage(eventPackage)) {
+            activeWhatsAppPackage = ""
+            return
+        }
+        activeWhatsAppPackage = eventPackage.toString()
         val rootNode = rootInActiveWindow ?: return
         
         // 1. Detect Conversation Title (Individual or Group name)
@@ -74,7 +82,7 @@ class MyBIZconAccessibilityService : AccessibilityService() {
      * Identifies the current contact name or group chat name from the top header layout.
      */
     private fun detectConversationTitle(rootNode: AccessibilityNodeInfo) {
-        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId(WHATSAPP_CONVERSATION_TITLE_ID)
+        val titleNodes = rootNode.findAccessibilityNodeInfosByViewId(whatsAppViewId("conversation_contact_name"))
         if (titleNodes != null && titleNodes.isNotEmpty()) {
             val titleText = titleNodes[0].text?.toString() ?: ""
             if (titleText != activeConversationTitle && titleText.isNotEmpty()) {
@@ -96,7 +104,7 @@ class MyBIZconAccessibilityService : AccessibilityService() {
      */
     private fun scrapeActiveChatWindow(rootNode: AccessibilityNodeInfo) {
         // Find all message bubbles
-        val messageNodes = rootNode.findAccessibilityNodeInfosByViewId(WHATSAPP_MESSAGE_TEXT_ID) ?: return
+        val messageNodes = rootNode.findAccessibilityNodeInfosByViewId(whatsAppViewId("message_text")) ?: return
         if (messageNodes.isEmpty()) return
 
         // Get the latest message bubble node
@@ -111,7 +119,7 @@ class MyBIZconAccessibilityService : AccessibilityService() {
         var senderName = "Unknown"
         val parent = latestMessageNode.parent
         if (parent != null) {
-            val senderNodes = parent.findAccessibilityNodeInfosByViewId(WHATSAPP_GROUP_SENDER_NAME_ID)
+            val senderNodes = parent.findAccessibilityNodeInfosByViewId(whatsAppViewId("sender_name"))
             if (senderNodes != null && senderNodes.isNotEmpty()) {
                 senderName = senderNodes[0].text?.toString() ?: "Group Member"
             } else {
@@ -128,6 +136,10 @@ class MyBIZconAccessibilityService : AccessibilityService() {
     }
 
     private fun captureCurrentConversationAsNote(): Boolean {
+        if (activeWhatsAppPackage.isBlank()) {
+            Log.w(TAG, "Note capture skipped because no active WhatsApp package is selected.")
+            return false
+        }
         if (lastScrapedText.isBlank()) {
             Log.w(TAG, "Note capture skipped because no active message has been scraped yet.")
             return false
@@ -241,8 +253,12 @@ class MyBIZconAccessibilityService : AccessibilityService() {
      * Receives the user's selected draft from the overlay UI and injects it into WhatsApp's input box.
      */
     fun injectSuggestedReply(draftText: String): Boolean {
+        if (activeWhatsAppPackage.isBlank()) {
+            Log.w(TAG, "Reply injection skipped because no active WhatsApp package is selected.")
+            return false
+        }
         val rootNode = rootInActiveWindow ?: return false
-        val inputNodes = rootNode.findAccessibilityNodeInfosByViewId(WHATSAPP_INPUT_TEXT_ID)
+        val inputNodes = rootNode.findAccessibilityNodeInfosByViewId(whatsAppViewId("entry"))
         
         if (inputNodes != null && inputNodes.isNotEmpty()) {
             val inputNode = inputNodes[0]
@@ -268,5 +284,9 @@ class MyBIZconAccessibilityService : AccessibilityService() {
             activeInstance = null
         }
         super.onDestroy()
+    }
+
+    private fun whatsAppViewId(resourceName: String): String {
+        return "$activeWhatsAppPackage:id/$resourceName"
     }
 }

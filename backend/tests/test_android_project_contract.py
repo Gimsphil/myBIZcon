@@ -71,3 +71,24 @@ def test_android_resets_scraped_message_cache_when_conversation_changes():
     assert 'lastScrapedText = ""' in service
     assert 'lastScrapedSender = "Unknown"' in service
     assert "activeConversationTitle = titleText\n                resetScrapedMessageCache()" in service
+
+
+def test_android_accessibility_contract_supports_whatsapp_business():
+    """Accessibility service must target normal and Business WhatsApp only."""
+    service = _read("java/com/mybizcon/client/MyBIZconAccessibilityService.kt")
+    config = _read("res/xml/accessibility_service_config.xml")
+
+    assert 'private const val WHATSAPP_PACKAGE = "com.whatsapp"' in service
+    assert 'private const val WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b"' in service
+    assert "private var activeWhatsAppPackage" in service
+    assert "private fun isWhatsAppPackage(packageName: CharSequence?): Boolean" in service
+    assert "val eventPackage = event.packageName" in service
+    assert "if (!isWhatsAppPackage(eventPackage)) {\n            activeWhatsAppPackage = \"\"\n            return\n        }" in service
+    assert "activeWhatsAppPackage = eventPackage.toString()" in service
+    assert "if (activeWhatsAppPackage.isBlank())" in service
+    assert 'return "$activeWhatsAppPackage:id/$resourceName"' in service
+    assert 'whatsAppViewId("message_text")' in service
+    assert 'whatsAppViewId("conversation_contact_name")' in service
+    assert 'whatsAppViewId("sender_name")' in service
+    assert 'whatsAppViewId("entry")' in service
+    assert 'android:packageNames="com.whatsapp,com.whatsapp.w4b' in config
