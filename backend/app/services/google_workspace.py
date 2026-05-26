@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from datetime import datetime
+from app.config import external_services_disabled
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -20,7 +21,10 @@ class GoogleWorkspaceService:
     def __init__(self):
         # In a real environment, we'd initialize the google-api-python-client here.
         # To avoid blocking dependencies, we provide a clean, double-fallback design.
-        self.credentials_found = os.path.exists("credentials.json")
+        self.credentials_found = (
+            not external_services_disabled()
+            and os.path.exists("credentials.json")
+        )
         if self.credentials_found:
             logger.info("🔐 Google API credentials.json detected. Preparing Google Workspace OAuth pipeline.")
         else:
@@ -38,6 +42,9 @@ class GoogleWorkspaceService:
             "start": {"dateTime": start_time, "timeZone": "Asia/Seoul"},
             "end": {"dateTime": end_time, "timeZone": "Asia/Seoul"}
         }
+
+        if external_services_disabled():
+            return self._mock_workspace_result("Google Calendar API", "calendar_event", event_payload)
 
         # Simulated API pipeline confirmation
         return {
@@ -62,6 +69,9 @@ class GoogleWorkspaceService:
         if due_date:
             task_payload["due"] = due_date
 
+        if external_services_disabled():
+            return self._mock_workspace_result("Google Tasks API", "task", task_payload)
+
         return {
             "status": "SUCCESS",
             "provider": "Google Tasks API",
@@ -76,6 +86,17 @@ class GoogleWorkspaceService:
         """
         logger.info(f"💾 Backing up transcript to Google Drive: '{title}.md' under folder '{folder_name}'")
         
+        if external_services_disabled():
+            return self._mock_workspace_result(
+                "Google Drive API",
+                "drive_backup",
+                {
+                    "title": title,
+                    "folder": folder_name,
+                    "markdown_content": markdown_content,
+                },
+            )
+
         # Serialize Markdown file locally in a workspace backup folder
         backup_dir = os.path.join(os.getcwd(), "drive_backups", folder_name.replace("/", "_"))
         os.makedirs(backup_dir, exist_ok=True)
@@ -100,6 +121,16 @@ class GoogleWorkspaceService:
             "filename": f"{sanitized_title}.md",
             "local_path": local_file_path,
             "drive_link": f"https://drive.google.com/drive/my-drive"
+        }
+
+    def _mock_workspace_result(self, provider: str, operation: str, payload: dict) -> dict:
+        logger.info("External services disabled. Returning offline Workspace mock result.")
+        return {
+            "status": "MOCK",
+            "provider": provider,
+            "operation": operation,
+            "payload": payload,
+            "offline": True,
         }
 
 google_workspace = GoogleWorkspaceService()

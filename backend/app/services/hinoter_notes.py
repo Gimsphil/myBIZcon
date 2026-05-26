@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
-"""HiNoter-style AI note capture service for myBIZcon.
+"""Offline-safe HiNoter-style note capture service for myBIZcon.
 
-This module keeps the feature contract deterministic/offline-safe while mirroring
-public HiNoter capabilities: one-tap capture, transcription note generation,
-speaker labels, AI summaries, mind maps, keyword jump/search, Ask AI, secure
-sharing, calendar auto-join metadata, and audio/YouTube ingestion metadata.
+The service builds deterministic structured notes from client-provided text.
+It intentionally does not call Google Calendar, YouTube, cloud AI APIs, or any
+external service. Calendar and YouTube fields are treated as metadata only.
 """
 
 from __future__ import annotations
@@ -16,13 +15,70 @@ from typing import Iterable
 
 
 STOPWORDS = {
-    "the", "and", "for", "with", "that", "this", "are", "you", "will",
-    "합니다", "주세요", "네", "다음", "회의", "공유", "기준", "검토",
+    "the",
+    "and",
+    "for",
+    "with",
+    "that",
+    "this",
+    "are",
+    "you",
+    "will",
+    "from",
+    "have",
+    "has",
+    "please",
+    "next",
+    "meeting",
+    "note",
 }
+
+DECISION_MARKERS = (
+    "decide",
+    "decided",
+    "decision",
+    "approve",
+    "approved",
+    "confirm",
+    "confirmed",
+    "budget",
+    "increase",
+    "승인",
+    "검토",
+    "결정",
+    "확정",
+    "예산",
+    "인상",
+)
+
+ACTION_MARKERS = (
+    "send",
+    "share",
+    "prepare",
+    "register",
+    "check",
+    "confirm",
+    "follow up",
+    "진행",
+    "작성",
+    "등록",
+    "공유",
+    "전달",
+    "보내",
+    "보내주세요",
+    "해주세요",
+    "하겠습니다",
+    "확인",
+    "준비",
+)
+
+MONDAY_MARKERS = ("monday", "월요일")
+WEDNESDAY_MARKERS = ("wednesday", "수요일")
+TODAY_MARKERS = ("today", "오늘")
 
 
 class HiNoterNoteService:
-    """Builds structured AI-note assets from a transcript payload."""
+    """Build structured AI-note assets from a transcript payload."""
 
     FEATURE_FLAGS = [
         "one_tap_recording",
@@ -77,10 +133,10 @@ class HiNoterNoteService:
             "mind_map": {
                 "root": title,
                 "branches": [
-                    {"label": "요약", "items": [summary]},
-                    {"label": "발화자", "items": speakers},
-                    {"label": "키워드", "items": keywords[:8]},
-                    {"label": "액션아이템", "items": [item["title"] for item in action_items]},
+                    {"label": "Summary", "items": [summary]},
+                    {"label": "Speakers", "items": speakers},
+                    {"label": "Keywords", "items": keywords[:8]},
+                    {"label": "Action Items", "items": [item["title"] for item in action_items]},
                 ],
             },
             "decisions": decisions,
@@ -127,54 +183,120 @@ class HiNoterNoteService:
         moments = []
         for idx, line in enumerate(lines):
             text = line.split(":", 1)[-1].strip()
-            moments.append({
-                "offset_seconds": idx * 30,
-                "text": text,
-                "keywords": self._extract_keywords(text)[:5],
-            })
+            moments.append(
+                {
+                    "offset_seconds": idx * 30,
+                    "text": text,
+                    "keywords": self._extract_keywords(text)[:5],
+                }
+            )
         return moments
 
     def _extract_keywords(self, text: str) -> list[str]:
-        tokens = re.findall(r"[가-힣A-Za-z0-9%]+", text or "")
-        cleaned = [token for token in tokens if len(token) > 1 and token.lower() not in STOPWORDS]
+        tokens = re.findall(r"[^\W_]{2,}|[0-9]+%", text or "", flags=re.UNICODE)
+        cleaned = [token for token in tokens if token.lower() not in STOPWORDS]
         return [word for word, _ in Counter(cleaned).most_common(12)]
 
     def _extract_decisions(self, lines: list[str]) -> list[str]:
-        decision_markers = ("확정", "결정", "검토", "승인", "인상", "진행")
-        return [line.split(":", 1)[-1].strip() for line in lines if any(m in line for m in decision_markers)]
+        markers = (
+            "decide",
+            "decided",
+            "decision",
+            "approve",
+            "approved",
+            "confirm",
+            "confirmed",
+            "budget",
+            "increase",
+            "인상",
+            "결정",
+            "확정",
+        )
+        markers = markers + DECISION_MARKERS
+        return [
+            line.split(":", 1)[-1].strip()
+            for line in lines
+            if any(marker.lower() in line.lower() for marker in markers)
+        ]
 
     def _extract_action_items(self, lines: list[str]) -> list[dict]:
-        markers = ("보내", "공유", "준비", "작성", "등록", "확인", "해주세요", "하겠습니다")
+        markers = (
+            "send",
+            "share",
+            "prepare",
+            "register",
+            "check",
+            "confirm",
+            "follow up",
+            "보내",
+            "공유",
+            "준비",
+            "확인",
+        )
+        markers = markers + ACTION_MARKERS
         items = []
         for line in lines:
             text = line.split(":", 1)[-1].strip()
-            if any(marker in text for marker in markers):
-                items.append({"title": text[:60], "notes": text, "due_date": self._extract_due_date(text)})
+            if any(marker.lower() in text.lower() for marker in markers):
+                items.append(
+                    {
+                        "title": text[:60],
+                        "notes": text,
+                        "due_date": self._extract_due_date(text),
+                    }
+                )
         return items
 
     def _extract_due_date(self, text: str) -> str | None:
-        if "월요일" in text:
+        lowered = text.lower()
+        for marker in MONDAY_MARKERS:
+            if marker in lowered or marker in text:
+                return "next-monday"
+        for marker in WEDNESDAY_MARKERS:
+            if marker in lowered or marker in text:
+                return "next-wednesday"
+        for marker in TODAY_MARKERS:
+            if marker in lowered or marker in text:
+                return "today"
+        if "monday" in lowered or "월요일" in text:
             return "next-monday"
-        if "수요일" in text:
+        if "wednesday" in lowered or "수요일" in text:
             return "next-wednesday"
-        if "오늘" in text:
+        if "today" in lowered or "오늘" in text:
             return "today"
         return None
 
-    def _summarise(self, title: str, lines: list[str], keywords: list[str], action_items: list[dict]) -> str:
+    def _summarise(
+        self,
+        title: str,
+        lines: list[str],
+        keywords: list[str],
+        action_items: list[dict],
+    ) -> str:
         first = lines[0].split(":", 1)[-1].strip() if lines else title
-        action_count = len(action_items)
-        keyword_text = ", ".join(keywords[:4]) if keywords else "핵심 키워드 없음"
-        return f"{title}: {first} 중심으로 논의되었고, 주요 키워드는 {keyword_text}입니다. 액션아이템 {action_count}건이 추출되었습니다."
+        keyword_text = ", ".join(keywords[:4]) if keywords else "no major keywords"
+        return (
+            f"{title}: captured {len(lines)} transcript segment(s). "
+            f"Opening context: {first}. "
+            f"Key terms: {keyword_text}. "
+            f"Action items extracted: {len(action_items)}."
+        )
 
-    def _answer_question(self, ask: str | None, summary: str, action_items: list[dict], decisions: list[str]) -> str:
+    def _answer_question(
+        self,
+        ask: str | None,
+        summary: str,
+        action_items: list[dict],
+        decisions: list[str],
+    ) -> str:
         if not ask:
-            return "질문이 없어서 요약과 추출된 액션아이템을 기준으로 노트를 생성했습니다."
-        if "액션" in ask or "할일" in ask or "아이템" in ask:
+            return "No question was provided; the note was summarized and indexed."
+        lowered = ask.lower()
+        if "action" in lowered or "todo" in lowered or "할 일" in ask or "액션" in ask:
             if not action_items:
-                return "명시적인 액션아이템은 발견되지 않았습니다."
+                return "No explicit action items were found."
             return " / ".join(item["title"] for item in action_items)
-        if "결정" in ask and decisions:
+        if ("decision" in lowered or "결정" in ask) and decisions:
             return " / ".join(decisions)
         return summary
 

@@ -2,7 +2,7 @@
 import json
 import logging
 import httpx
-from app.config import settings
+from app.config import external_services_disabled, settings
 from app.services.rag_engine import rag_engine
 from templates.relationship_prompts import (
     SYSTEM_INSTRUCTION_BASE,
@@ -85,6 +85,10 @@ class RelationshipEngineService:
             logger.info("ℹ️ RAG Corpus: No relevant past few-shot context found. Relying on zero-shot templates.")
 
         prompt_payload = f"Sender: '{sender}'\nMessage Content: '{content}'"
+
+        if external_services_disabled():
+            logger.warning("External services disabled. Emulating local LLM mock response.")
+            return self._generate_mock_response(content, relationship, platform_upper)
 
         # Fallback API key validation
         api_key = settings.GEMINI_API_KEY

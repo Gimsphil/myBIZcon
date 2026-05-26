@@ -31,6 +31,8 @@ class TranslationOverlayService : Service() {
     private var currentMode = DISPLAY_MODE_DUAL // Default: Original + Translation
 
     companion object {
+        const val ACTION_CAPTURE_NOTE = "ACTION_CAPTURE_NOTE"
+        const val ACTION_SHOW_NOTE_CAPTURE = "ACTION_SHOW_NOTE_CAPTURE"
         private const val DISPLAY_MODE_TRANSLATION_ONLY = 1
         private const val DISPLAY_MODE_DUAL = 2
         private const val DISPLAY_MODE_ORIGINAL_ONLY = 3
@@ -44,13 +46,67 @@ class TranslationOverlayService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        if (intent != null && intent.action == "ACTION_UPDATE_TRANSLATION") {
-            val rawData = intent.getStringExtra("data") ?: ""
-            if (rawData.isNotEmpty()) {
-                showOrUpdateOverlay(rawData)
+        when (intent?.action) {
+            "ACTION_UPDATE_TRANSLATION" -> {
+                val rawData = intent.getStringExtra("data") ?: ""
+                if (rawData.isNotEmpty()) {
+                    showOrUpdateOverlay(rawData)
+                }
+            }
+            ACTION_SHOW_NOTE_CAPTURE -> {
+                showNoteCaptureOverlay()
+            }
+            ACTION_CAPTURE_NOTE -> {
+                MyBIZconAccessibilityService.captureNoteFromActiveMessenger()
+                removeFloatingOverlay()
             }
         }
         return START_NOT_STICKY
+    }
+
+    private fun showNoteCaptureOverlay() {
+        removeFloatingOverlay()
+
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.END
+            x = 24
+            y = 180
+        }
+
+        val layout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(0xE6212529.toInt())
+            setPadding(30, 20, 30, 20)
+        }
+
+        val title = TextView(this).apply {
+            text = getString(R.string.open_note_capture_demo)
+            textSize = 14f
+            setTextColor(0xFFFFFFFF.toInt())
+            setPadding(0, 0, 0, 12)
+        }
+        layout.addView(title)
+
+        val captureBtn = Button(this).apply {
+            text = getString(R.string.open_note_capture_demo)
+            textSize = 13f
+            setTextColor(0xFFFFFFFF.toInt())
+            setBackgroundColor(0xFF008080.toInt())
+            setOnClickListener {
+                MyBIZconAccessibilityService.captureNoteFromActiveMessenger()
+                removeFloatingOverlay()
+            }
+        }
+        layout.addView(captureBtn)
+
+        overlayView = layout
+        windowManager.addView(overlayView, params)
     }
 
     /**

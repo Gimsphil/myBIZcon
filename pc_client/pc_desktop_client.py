@@ -34,6 +34,7 @@ class PCDesktopClient:
         os.makedirs(self.recordings_dir, exist_ok=True)
         self.audio_path = os.path.join(self.recordings_dir, "meeting_capture.wav")
         self.recorder = None
+        self.last_meeting_transcript = ""
 
         # Apply Premium UI Styles
         self.setup_styles()
@@ -102,6 +103,9 @@ class PCDesktopClient:
 
         self.overlay_btn = ttk.Button(control_card, text="TOGGLE PC SUBTITLE OVERLAY", style="Action.TButton", command=self.toggle_overlay)
         self.overlay_btn.pack(fill="x", pady=10)
+
+        self.note_capture_btn = ttk.Button(control_card, text="CAPTURE AI NOTE", style="Action.TButton", command=self.capture_current_note)
+        self.note_capture_btn.pack(fill="x", pady=10)
 
         ttk.Label(control_card, text="Saved Recording WAV Path:", background="#252538", font=("Segoe UI", 8, "italic")).pack(anchor="w", pady=(15, 2))
         self.path_lbl = tk.Entry(control_card, bg="#1E1E2E", fg="#B5B5B5", bd=0, font=("Segoe UI", 8))
@@ -189,6 +193,44 @@ class PCDesktopClient:
         except Exception as e:
             messagebox.showerror("Indexing Error", f"Failed to connect to RAG indexer: {str(e)}")
 
+    def capture_current_note(self):
+        """Sends current transcript/message context to the HiNoter-style note endpoint."""
+        transcript = self._current_note_transcript()
+        if not transcript:
+            messagebox.showwarning("AI Note Capture", "Please enter message content or process a transcript first.")
+            return
+
+        title = self.sender_entry.get().strip() or "PC captured note"
+        payload = {
+            "title": title,
+            "source_type": "pc_client",
+            "source_uri": self.audio_path if os.path.exists(self.audio_path) else None,
+            "transcript": transcript,
+            "speaker_labels": [title],
+            "ask": "Summarize key decisions and action items from this content.",
+        }
+        threading.Thread(target=self._post_note_capture_to_api, args=(payload,), daemon=True).start()
+
+    def _current_note_transcript(self):
+        """Returns the last processed meeting transcript, otherwise current message text."""
+        message_text = self.message_txt.get("1.0", "end-1c").strip()
+        last_meeting_transcript = getattr(self, "last_meeting_transcript", "").strip()
+        if last_meeting_transcript:
+            return last_meeting_transcript
+        return message_text
+
+    def _post_note_capture_to_api(self, payload):
+        url = f"{self.backend_url}/notes/capture"
+        req = self._build_json_request(url, payload)
+        try:
+            with urllib.request.urlopen(req, timeout=10.0) as response:
+                result = json.loads(response.read().decode("utf-8"))
+                summary = result.get("summary", "AI note captured successfully.")
+                self.root.after(0, lambda: self._update_copilot_facts(json.dumps(result, ensure_ascii=False, indent=2)))
+                self.root.after(0, lambda: messagebox.showinfo("AI Note Capture", summary))
+        except Exception as e:
+            self.root.after(0, lambda: messagebox.showerror("AI Note Capture Error", f"Failed to capture note: {str(e)}"))
+
     def toggle_recording(self):
         self.is_recording = not self.is_recording
         if self.is_recording:
@@ -213,6 +255,7 @@ class PCDesktopClient:
             with urllib.request.urlopen(req) as response:
                 result = json.loads(response.read().decode("utf-8"))
                 transcript = result.get("transcript_markdown", "")
+                self.last_meeting_transcript = transcript.strip()
                 summary = result.get("summary", "")
                 decisions = result.get("decisions", [])
                 speaker_analysis = result.get("speaker_analysis", [])

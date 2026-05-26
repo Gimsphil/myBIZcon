@@ -1,7 +1,7 @@
 import os
 import logging
 import httpx
-from app.config import settings
+from app.config import external_services_disabled, settings
 
 logger = logging.getLogger("myBIZcon_VoiceService")
 
@@ -27,6 +27,16 @@ class VoiceService:
         else:
             logger.info("⚠️ ElevenLabs API key missing. Using standard Google TTS fallback emulation.")
 
+    def _openai_api_key(self) -> str:
+        if external_services_disabled():
+            return ""
+        return self.openai_key or os.getenv("OPENAI_API_KEY", "")
+
+    def _elevenlabs_api_key(self) -> str:
+        if external_services_disabled():
+            return ""
+        return self.elevenlabs_key or os.getenv("ELEVENLABS_API_KEY", "")
+
     async def transcribe_audio(self, wav_file_path: str) -> str:
         """
         Sends WAV audio file to OpenAI Whisper API for transcription.
@@ -35,13 +45,14 @@ class VoiceService:
             logger.error(f"❌ File not found: {wav_file_path}")
             return "[Error: Audio file missing]"
 
-        if not self.openai_key:
+        openai_key = self._openai_api_key()
+        if not openai_key:
             logger.info("🔮 Emulating OpenAI Whisper API transcription (Offline Bounded Mock).")
             return self._get_mock_transcription()
 
         logger.info(f"📤 Uploading {wav_file_path} to OpenAI Whisper API...")
         url = "https://api.openai.com/v1/audio/transcriptions"
-        headers = {"Authorization": f"Bearer {self.openai_key}"}
+        headers = {"Authorization": f"Bearer {openai_key}"}
         
         try:
             # Read file stream
@@ -73,7 +84,8 @@ class VoiceService:
         if not text:
             return b""
 
-        if not self.elevenlabs_key:
+        elevenlabs_key = self._elevenlabs_api_key()
+        if not elevenlabs_key:
             logger.info("🔮 Emulating Text-To-Speech synthesis (Offline Bounded Mock).")
             return self._generate_mock_audio_bytes()
 
@@ -81,7 +93,7 @@ class VoiceService:
         voice_id = "21m00Tcm4TlvDq8ikWAM" 
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
         headers = {
-            "xi-api-key": self.elevenlabs_key,
+            "xi-api-key": elevenlabs_key,
             "Content-Type": "application/json"
         }
         payload = {

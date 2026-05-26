@@ -41,3 +41,33 @@ def test_overlay_uses_active_accessibility_service_not_new_instance():
     assert "MyBIZconAccessibilityService.injectIntoActiveMessenger" in overlay
     assert "activeInstance = this" in service
     assert "fun injectSuggestedReply(draftText: String): Boolean" in service
+
+
+def test_android_exposes_hinoter_note_capture_contract():
+    """Android thin client should be ready to trigger HiNoter-style note capture."""
+    service = _read("java/com/mybizcon/client/MyBIZconAccessibilityService.kt")
+    overlay = _read("java/com/mybizcon/client/TranslationOverlayService.kt")
+    activity = _read("java/com/mybizcon/client/MainActivity.kt")
+    strings = _read("res/values/strings.xml")
+
+    assert "NOTES_CAPTURE_URL" in service
+    assert "/notes/capture" in service
+    assert "sendNoteCaptureToBackend" in service
+    assert "ACTION_CAPTURE_NOTE" in overlay
+    assert "ACTION_SHOW_NOTE_CAPTURE" in overlay
+    assert "captureNoteFromActiveMessenger" in service
+    assert '"source_type", "android_overlay"' in service
+    assert "conn.connectTimeout = 10000" in service
+    assert "conn?.disconnect()" in service
+    assert "open_note_capture_demo" in strings
+    assert "ACTION_SHOW_NOTE_CAPTURE" in activity
+
+
+def test_android_resets_scraped_message_cache_when_conversation_changes():
+    """Changing chat title must clear stale note-capture message state."""
+    service = _read("java/com/mybizcon/client/MyBIZconAccessibilityService.kt")
+
+    assert "private fun resetScrapedMessageCache()" in service
+    assert 'lastScrapedText = ""' in service
+    assert 'lastScrapedSender = "Unknown"' in service
+    assert "activeConversationTitle = titleText\n                resetScrapedMessageCache()" in service

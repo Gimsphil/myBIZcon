@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from fastapi.testclient import TestClient
 from backend.app.main import app
+from backend.app.services.hinoter_notes import hinoter_note_service
 
 
 def test_hinoter_note_capture_contract_returns_summary_mind_map_and_searchable_moments():
@@ -59,3 +60,27 @@ def test_hinoter_note_capture_contract_accepts_youtube_and_calendar_auto_join_me
     assert data["calendar_auto_join"] is True
     assert "calendar_auto_join" in data["feature_flags"]
     assert "youtube_or_audio_upload" in data["feature_flags"]
+
+
+def test_hinoter_note_capture_extracts_common_korean_business_actions_and_decisions():
+    result = hinoter_note_service.capture_note(
+        title="한국어 업무 회의",
+        source_type="pc_client",
+        source_uri=None,
+        transcript=(
+            "김대표: 신규 견적은 승인하고 예산 인상 기준으로 검토하겠습니다.\n"
+            "박과장: 계약서 초안을 작성해서 오늘 등록해주세요.\n"
+            "이대리: 고객사 공유 자료는 수요일까지 진행하겠습니다."
+        ),
+        speaker_labels=["김대표", "박과장", "이대리"],
+        ask="액션 아이템은?",
+    )
+
+    action_notes = "\n".join(item["notes"] for item in result["action_items"])
+    decision_text = "\n".join(result["decisions"])
+
+    assert "작성해서 오늘 등록해주세요" in action_notes
+    assert "수요일까지 진행하겠습니다" in action_notes
+    assert "승인하고 예산 인상 기준으로 검토하겠습니다" in decision_text
+    assert any(item["due_date"] == "today" for item in result["action_items"])
+    assert any(item["due_date"] == "next-wednesday" for item in result["action_items"])

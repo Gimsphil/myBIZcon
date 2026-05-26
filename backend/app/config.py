@@ -10,6 +10,19 @@ Reviewed by: Antigravity (기술 검토자)
 """
 import os
 
+
+EXTERNAL_SERVICES_DISABLED_VALUES = {"1", "true", "yes"}
+
+
+def external_services_disabled() -> bool:
+    """Return True when live third-party integrations must be bypassed."""
+    return (
+        os.getenv("MYBIZCON_DISABLE_EXTERNAL_SERVICES", "")
+        .strip()
+        .lower()
+        in EXTERNAL_SERVICES_DISABLED_VALUES
+    )
+
 # ---------------------------------------------------------------------------
 # Optional: load .env file if python-dotenv is installed
 # ---------------------------------------------------------------------------

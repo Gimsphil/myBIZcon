@@ -4,6 +4,7 @@
     <string name="main_activity_description">Android thin client for message translation overlays and business reply assistance.</string>
     <string name="open_accessibility_settings">Open Accessibility Settings</string>
     <string name="open_overlay_settings">Open Overlay Permission Settings</string>
+    <string name="open_note_capture_demo">Capture AI Note</string>
     <string name="accessibility_service_label">myBIZcon Message Assistant</string>
     <string name="accessibility_service_description">Reads active messenger text to provide translation and reply suggestions.</string>
 </resources>

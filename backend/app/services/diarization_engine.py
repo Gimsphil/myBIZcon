@@ -5,7 +5,7 @@ import json
 import logging
 import httpx
 from datetime import datetime
-from app.config import settings
+from app.config import external_services_disabled, settings
 from app.services.google_workspace import google_workspace
 
 logger = logging.getLogger("myBIZcon_DiarizationEngine")
@@ -76,6 +76,10 @@ class DiarizationEngineService:
         if not os.path.exists(wav_file_path):
             logger.error(f"❌ Audio file path does not exist: {wav_file_path}")
             return {"status": "ERROR", "message": "Audio file not found."}
+
+        if external_services_disabled():
+            logger.warning("External services disabled. Generating offline diarized mock response.")
+            return self._generate_mock_diarization()
 
         # Check API key status
         api_key = settings.GEMINI_API_KEY

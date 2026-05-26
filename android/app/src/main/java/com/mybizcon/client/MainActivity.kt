@@ -57,10 +57,21 @@ class MainActivity : Activity() {
             }
         }
 
+        val noteCaptureButton = Button(this).apply {
+            text = getString(R.string.open_note_capture_demo)
+            setOnClickListener {
+                val intent = Intent(this@MainActivity, TranslationOverlayService::class.java).apply {
+                    action = TranslationOverlayService.ACTION_SHOW_NOTE_CAPTURE
+                }
+                startService(intent)
+            }
+        }
+
         layout.addView(title)
         layout.addView(description)
         layout.addView(accessibilityButton)
         layout.addView(overlayButton)
+        layout.addView(noteCaptureButton)
         setContentView(layout)
     }
 }

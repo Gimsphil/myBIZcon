@@ -1,4 +1,5 @@
 import logging
+import os
 import httpx
 from typing import List
 from app.config import settings
@@ -23,6 +24,10 @@ class CopilotSearchService:
 
         if not query:
             return []
+
+        if os.getenv("MYBIZCON_DISABLE_EXTERNAL_SERVICES", "").lower() in {"1", "true", "yes"}:
+            logger.info("External search disabled; using offline context lookup mocks.")
+            return self._get_mock_business_facts(query)
 
         # Graceful sandbox fallback if offline/no keys
         if "계약서" in query or "제휴" in query or "pricing" in query or "schedule" in query:

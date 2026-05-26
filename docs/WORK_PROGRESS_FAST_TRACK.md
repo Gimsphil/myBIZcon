@@ -28,9 +28,17 @@
 - Live Calendar/YouTube/AI 호출은 아직 연결하지 않고 오프라인 안전 계약 계층으로 구현했다. 실제 외부 연동은 추후 명시 승인 후 연결한다.
 - `docs/HINOTER_FEATURE_INTEGRATION.md`에 출처와 반영 범위를 기록했다.
 
+## 2026-05-26 WhatsApp 재개 작업
+
+- 연결 확인: `D:/myBIZcon` Git 저장소, `main...origin/main`, Codex CLI `0.133.0` 사용 가능 확인.
+- Codex 기본 sandbox에서 `windows sandbox: spawn setup refresh` 오류가 재발하여, 로컬 신뢰 저장소 한정으로 `--sandbox danger-full-access -C D:/myBIZcon` 방식으로 읽기/수정 작업을 진행했다.
+- 전체 backend 테스트를 실행했고 `67 passed`를 확인했다.
+- Codex 리뷰 HIGH 2건을 반영했다: 외부서비스 비활성 플래그 전역 가드, Android 대화방 전환 시 note capture 캐시 초기화.
+- Codex 리뷰 MEDIUM 2건도 반영했다: HiNoter 한국어 액션/결정 추출 보강, PC note capture 상태 분리.
+- 신규 계약 테스트 `backend/tests/test_external_services_disable_contract.py`를 추가했고 Android/HiNoter/PC 계약 테스트를 보강했다.
+
 ## 다음 작업
 
-1. 전체 테스트 실행 및 실패 수정
-2. Codex 검토 재실행
-3. Agy CLI에는 Android build 최소 통과선 또는 문서/인코딩 정리 중 작은 단위 작업 지시
-4. 검수 후 커밋 및 GitHub push
+1. 현재 미커밋 diff 최종 검수
+2. Android Gradle 빌드 가능 여부 확인
+3. 검수 후 커밋 및 GitHub push

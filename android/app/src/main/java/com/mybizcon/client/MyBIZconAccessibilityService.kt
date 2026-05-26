@@ -26,11 +26,16 @@ class MyBIZconAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "myBIZcon_AccessService"
         private const val BACKEND_URL = "http://10.0.2.2:8000/api/v1/chat/message" // Localhost via Android Emulator
+        private const val NOTES_CAPTURE_URL = "http://10.0.2.2:8000/api/v1/notes/capture"
         private var activeInstance: MyBIZconAccessibilityService? = null
 
         fun injectIntoActiveMessenger(draftText: String): Boolean {
             // Routes overlay-selected reply text to the running accessibility service.
             return activeInstance?.injectSuggestedReply(draftText) == true
+        }
+
+        fun captureNoteFromActiveMessenger(): Boolean {
+            return activeInstance?.captureCurrentConversationAsNote() == true
         }
         
         // Node Resource IDs for unmodified WhatsApp layouts (crucial for targeted scraping)
@@ -42,6 +47,7 @@ class MyBIZconAccessibilityService : AccessibilityService() {
 
     private var lastScrapedText = ""
     private var activeConversationTitle = ""
+    private var lastScrapedSender = "Unknown"
 
     override fun onServiceConnected() {
         super.onServiceConnected()
@@ -73,9 +79,15 @@ class MyBIZconAccessibilityService : AccessibilityService() {
             val titleText = titleNodes[0].text?.toString() ?: ""
             if (titleText != activeConversationTitle && titleText.isNotEmpty()) {
                 activeConversationTitle = titleText
+                resetScrapedMessageCache()
                 Log.d(TAG, "📂 Active Conversation Changed: $activeConversationTitle")
             }
         }
+    }
+
+    private fun resetScrapedMessageCache() {
+        lastScrapedText = ""
+        lastScrapedSender = "Unknown"
     }
 
     /**
@@ -109,8 +121,66 @@ class MyBIZconAccessibilityService : AccessibilityService() {
 
         Log.i(TAG, "✉️ Scraped Incoming Msg: [$senderName]: $messageText")
 
+        lastScrapedSender = senderName
+
         // Sync with backend API asynchronously
         sendPayloadToBackend(senderName, messageText, activeConversationTitle)
+    }
+
+    private fun captureCurrentConversationAsNote(): Boolean {
+        if (lastScrapedText.isBlank()) {
+            Log.w(TAG, "Note capture skipped because no active message has been scraped yet.")
+            return false
+        }
+        sendNoteCaptureToBackend(
+            title = activeConversationTitle.ifBlank { "Android conversation note" },
+            transcript = "${lastScrapedSender}: ${lastScrapedText}"
+        )
+        return true
+    }
+
+    /**
+     * Sends the current messenger context to the local HiNoter-style note endpoint.
+     */
+    private fun sendNoteCaptureToBackend(title: String, transcript: String) {
+        thread {
+            var conn: HttpURLConnection? = null
+            try {
+                val url = URL(NOTES_CAPTURE_URL)
+                conn = url.openConnection() as HttpURLConnection
+                conn.requestMethod = "POST"
+                conn.setRequestProperty("Content-Type", "application/json")
+                conn.connectTimeout = 10000
+                conn.readTimeout = 10000
+                conn.doOutput = true
+
+                val payload = JSONObject().apply {
+                    put("title", title)
+                    put("source_type", "android_overlay")
+                    put("source_uri", activeConversationTitle)
+                    put("transcript", transcript)
+                    put("speaker_labels", org.json.JSONArray().put(lastScrapedSender))
+                    put("ask", "Summarize key actions from this conversation.")
+                }
+
+                OutputStreamWriter(conn.outputStream).use { writer ->
+                    writer.write(payload.toString())
+                    writer.flush()
+                }
+
+                val responseCode = conn.responseCode
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val responseText = conn.inputStream.bufferedReader().use { it.readText() }
+                    Log.d(TAG, "Note capture success: $responseText")
+                } else {
+                    Log.e(TAG, "Note capture failed: HTTP $responseCode")
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Note capture network error: ${e.message}")
+            } finally {
+                conn?.disconnect()
+            }
+        }
     }
 
     /**
